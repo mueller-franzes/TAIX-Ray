@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cxr"
+version = "1.0"
+dependencies = [
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "torchaudio==2.6.0",
+    "lightning==2.5.0",
+    "matplotlib==3.10.0",
+    "openpyxl==3.1.5",
+    "pandas==2.2.3",
+    "seaborn==0.13.2",
+    "tqdm==4.67.1",
+    "boto3==1.36.21",
+    "pydicom==3.0.1",
+    "pyzipper==0.3.6",
+    "scikit-learn=="1.6.1",
+    "wandb==0.19.6",
+    "einops==0.8.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

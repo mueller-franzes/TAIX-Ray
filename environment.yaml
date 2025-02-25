@@ -1,0 +1,8 @@
+name: UKA-CXR
+channels:
+  - conda
+dependencies:
+  - python=3.10
+  - pip=25.0
+  - pip:
+      - -e .
