@@ -8,9 +8,9 @@ def tensor2image(tensor, batch=0):
 
 
 ds = CXR_Dataset(
-    # random_flip=True,
+    random_ver_flip=True,
     random_center=True,
-    # random_rotate=True, 
+    random_rotate=True, 
     # random_inverse=True,
 )
 
