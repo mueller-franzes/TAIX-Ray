@@ -28,23 +28,25 @@ class CXR_Dataset(data.Dataset):
             fraction=None,
             label=None, # None = all labels, list of labels or single label
             transform = None,
-            random_flip = False,
+            random_hor_flip = False,
+            random_ver_flip = False,
             random_center=False,
             random_rotate=False,
             random_inverse=False,
-            
+            cache_images=False
         ):
         self.path_root = Path(self.PATH_ROOT if path_root is None else path_root)
         self.split = split
         self.label = label if label is not None else self.LABELS
+        self.cache_images = cache_images
 
         if transform is None: 
             self.transform = T.Compose([
                 # T.Resize(448, max_size=512),
                 T.RandomCrop((448, 448), pad_if_needed=True, padding_mode='constant', fill=0) if random_center else T.CenterCrop((448, 448)),
                 T.Lambda(lambda x: x.transpose(1, 2) if torch.rand((1,),)[0]<0.5 else x ) if random_rotate else T.Lambda(lambda x: x),
-                T.RandomHorizontalFlip() if random_flip else nn.Identity(),
-                T.RandomVerticalFlip() if random_flip else nn.Identity(),
+                T.RandomHorizontalFlip() if random_hor_flip else nn.Identity(),
+                T.RandomVerticalFlip() if random_ver_flip else nn.Identity(),
                 T.Lambda(lambda x:-x if torch.rand((1,),)[0]<0.5 else x) if random_inverse else T.Lambda(lambda x: x),
             ])         
         else:
@@ -62,14 +64,15 @@ class CXR_Dataset(data.Dataset):
         self.item_pointers = df.index.tolist()
         self.df = df
 
-        # self.images = {}
-        # path_folder = self.path_root/"data_png_resize"
-        # with ThreadPoolExecutor(100) as executor:
-        #     uid_to_future = {uid: executor.submit(self.load_img, path_folder / f'{uid}.png') for uid in  tqdm(self.df['UID'],  desc="Submitting tasks")}
-            
-        #     for uid, future in tqdm(uid_to_future.items(), total=len(uid_to_future)):
-        #         images = future.result()
-        #         self.images[uid] = images
+        if cache_images:
+            self.images = {}
+            path_folder = self.path_root/"data_png_resize"
+            with ThreadPoolExecutor(50) as executor:
+                uid_to_future = {uid: executor.submit(self.load_img, path_folder / f'{uid}.png') for uid in  tqdm(self.df['UID'],  desc="Submitting tasks")}
+                
+                for uid, future in tqdm(uid_to_future.items(), total=len(uid_to_future)):
+                    images = future.result()
+                    self.images[uid] = images
 
 
     def __len__(self):
@@ -99,17 +102,18 @@ class CXR_Dataset(data.Dataset):
         filename = f'{uid}.png'
         path_file = self.path_root/static_path_data/filename
 
-        try:
+        if self.cache_images:
+            img = self.images[uid]
+        else:
             img = self.load_img(path_file)
-        except:
-            print("Error loading", path_file)
         
-        # img = self.images[uid]
-
         img = torch.from_numpy(img)[None] # [1, H, W]
 
-        mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
-        img = (img-img[mask].mean())/img[mask].std()
+        # mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
+        # img = (img-img[mask].mean())/img[mask].std()
+
+        img = (img-img.mean())/img.std()
+
         img = self.transform(img)
         
         return {'uid':uid, 'source':img, 'target':label }
