@@ -9,18 +9,19 @@ from pytorch_lightning.loggers import WandbLogger
 
 from cxr.data.datasets import CXR_Dataset
 from cxr.data.datamodules import DataModule
+from cxr.models import ResNet
 from cxr.models import MST
-
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_dir', type=str, default=Path.cwd())
-    parser.add_argument('--model', type=str, default='MST', choices=['ResNet', 'MST']) # TODO 
+    parser.add_argument('--model', type=str, default='ResNet', choices=['ResNet', 'MST']) 
     parser.add_argument('--task', type=str, default="multilabel", choices=['multilabel', 'multiclass'])
     args = parser.parse_args()
 
     #------------ Settings/Defaults ----------------
+    torch.set_float32_matmul_precision('high')
     current_time = datetime.now().strftime("%Y_%m_%d_%H%M%S")
     path_run_dir = Path(args.run_dir) / 'runs'  / f'{args.model}_{current_time}'
     path_run_dir.mkdir(parents=True, exist_ok=True)
@@ -28,11 +29,11 @@ if __name__ == "__main__":
 
 
     # ------------ Load Data ----------------
-    ds_train = CXR_Dataset(split='train', random_center=True)
-    ds_val = CXR_Dataset(split='val')
+    ds_train = CXR_Dataset(split='train', cache_images=True, random_center=True, random_ver_flip=True, random_rotate=True)
+    ds_val = CXR_Dataset(split='val', cache_images=True)
     
     samples = len(ds_train) + len(ds_val)
-    batch_size = 2
+    batch_size = 32
     accumulate_grad_batches = 1 
     steps_per_epoch = samples / batch_size / accumulate_grad_batches
 
@@ -55,7 +56,8 @@ if __name__ == "__main__":
 
     # ------------ Initialize Model ------------
     out_ch = 2 if args.task=="multiclass" else len(ds_train.label)
-    model = MST(
+    MODEL = ResNet if args.model == 'ResNet' else MST
+    model = MODEL(
         in_ch=1, 
         out_ch=out_ch,
         task=args.task
