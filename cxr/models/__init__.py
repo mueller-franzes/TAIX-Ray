@@ -1,1 +1,2 @@
-from .model import MST
+from .mst import MST
+from .resnet import ResNet
