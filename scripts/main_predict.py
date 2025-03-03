@@ -13,7 +13,7 @@ from torchvision.utils import save_image
 
 from cxr.data.datasets import CXR_Dataset
 from cxr.data.datamodules import DataModule
-from cxr.models.model import MST
+from cxr.models import MST
 from cxr.utils.roc_curve import plot_roc_curve, cm2acc, cm2x
 from cxr.models.utils.functions import tensor2image, tensor_cam2image, minmax_norm
 
@@ -52,10 +52,12 @@ def evaluate(gt, nn, nn_pred, label, path_out):
 if __name__ == "__main__":
     #------------ Get Arguments ----------------
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_run', default='runs/MST_2025_02_25_090010/epoch=2-step=207114.ckpt', type=str)
+    parser.add_argument('--path_run', default='runs/MST_2025_03_02_165634_w_aug/epoch=19-step=86240.ckpt', type=str)
     parser.add_argument('--label', default='none', type=lambda x: None if x.lower() == 'none' else x) # None will use all labels 
+    parser.add_argument('--show_attention', action='store_true')
     args = parser.parse_args()
-
+    show_attention = args.show_attention
+    batch_size = 32
 
     #------------ Settings/Defaults ----------------
     path_run = Path(args.path_run) 
@@ -75,8 +77,8 @@ if __name__ == "__main__":
 
     dm = DataModule(
         ds_test = ds_test,
-        batch_size=1, 
-        num_workers=1,
+        batch_size=batch_size, 
+        num_workers=16,
         # pin_memory=True,
     ) 
 
@@ -92,29 +94,32 @@ if __name__ == "__main__":
     for batch in tqdm(dm.test_dataloader()):
         uid, source, target = batch['uid'], batch['source'], batch['target']
 
-        # Run Model 
-        # with torch.no_grad():
-        #     pred = model(source.to(device)).cpu()
-        pred, weight = model.forward_attention(source.to(device))
-        pred = pred.cpu()
-        weight = weight.cpu().detach()
+        if not show_attention:
+            # Run Model 
+            with torch.no_grad():
+                pred = model(source.to(device)).cpu()
 
-        path_out2 = path_out/'weights'
-        path_out2.mkdir(parents=True, exist_ok=True)
+        else:
+            pred, weight = model.forward_attention(source.to(device))
+            pred = pred.cpu()
+            weight = weight.cpu().detach()
 
-        # weight = weight.T
-        weight = weight[0]
-        for i in range(weight.size(0)):
-            weight_i = weight[i]
-            weight_i = weight_i.reshape(32, 32)
-            weight_i = weight_i[None, None]
-
-            weight_i = F.interpolate(weight_i, size=source.shape[2:], mode='bilinear') # trilinear, area
-            weight_i = weight_i/weight_i.sum() 
-
+            path_out2 = path_out/'weights'
+            path_out2.mkdir(parents=True, exist_ok=True)
+            save_image(tensor2image(source), path_out2/f'input_{uid[0]}.png', normalize=True)
             
-            save_image(tensor_cam2image(minmax_norm(source), minmax_norm(weight_i), alpha=0.5),  path_out2/f'overlay_{uid[0]}_{ds_test.label[i]}.png', normalize=False)
-        save_image(tensor2image(source), path_out2/f'input_{uid[0]}.png', normalize=True)
+            # Iterate over labels 
+            for i in range(weight.size(-1)):
+                weight_i = weight[:, :, i] # [B, HW]
+                weight_i = weight_i.reshape(batch_size, 32, 32) # [B, H, W]
+                weight_i = weight_i[:, None] # [B, C, H, W]
+
+                weight_i = F.interpolate(weight_i, size=source.shape[2:], mode='bilinear') # trilinear, area
+                # weight_i = weight_i/weight_i.sum(-1).sum(-1).unsqueeze(-1).unsqueeze(-1)
+                save_image(tensor_cam2image(minmax_norm(source), minmax_norm(weight_i), alpha=0.5),  path_out2/f'overlay_{uid[0]}_{ds_test.label[i]}.png', normalize=False)
+       
+
+
 
         pred_prob = torch.sigmoid(pred) # [B, Classes]
         pred = (pred_prob>0.5).type(torch.int)

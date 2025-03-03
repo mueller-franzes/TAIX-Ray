@@ -10,6 +10,7 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
+import numpy as np
 
 def init_bucket(s3_config: str):
     try:
@@ -80,18 +81,20 @@ def main():
     path_out = Path(args.path_out)
     path_out.mkdir(parents=True, exist_ok=True)
     
-    # Read CSV
+    # Read exams with valid images
     df = pd.read_csv(args.path_csv)
+    df = df.drop_duplicates(subset=['AccessionNumber'], keep="first").reset_index(drop=True)
 
-    # WORKAROUND: Filter out the rows that are not in the labels
-    df_labels = pd.read_excel('/ocean_storage/data/UKA/UKA_Thorax/download/metadata/reports.xlsx')
-    df_labels = df_labels.dropna(subset=['Untersuchungsnummer'])
-    df_labels = df_labels.drop_duplicates(subset=['Untersuchungsnummer'])
-    df_labels['Untersuchungsnummer'] = df_labels['Untersuchungsnummer'].str.replace('-', '0')
-    df = df.drop_duplicates(subset=['AccessionNumber']).reset_index(drop=True)
-    df = df[df['AccessionNumber'].isin(df_labels['Untersuchungsnummer'])].reset_index(drop=True)
+    # Read exams with valid report 
+    df_reports = pd.read_excel('/ocean_storage/data/UKA/UKA_Thorax/download/metadata/reports.xlsx')
+    df_reports = df_reports.dropna(subset=['Untersuchungsnummer'])
+    df_reports = df_reports.drop_duplicates(subset=['Untersuchungsnummer'], keep="first")
+    df_reports['Untersuchungsnummer'] = df_reports['Untersuchungsnummer'].str.replace('-', '0')
+
+    # Merge
+    df = df[df['AccessionNumber'].isin(df_reports["Untersuchungsnummer"])]
+
       
-
     # Init Bucket
     bucket = init_bucket(args.s3_config)
 

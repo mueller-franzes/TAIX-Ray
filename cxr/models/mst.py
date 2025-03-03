@@ -7,9 +7,30 @@ import  torch.optim.lr_scheduler as lr_scheduler
 
 from .base_model import BasicClassifier
 
+def attn(block, x, mask_i=None):
+    # forward_orig.__self__
+    B, N, C = x.shape
+    qkv = block.qkv(x).reshape(B, N, 3, block.num_heads, C // block.num_heads).permute(2, 0, 3, 1, 4)
+    
+    q, k, v = qkv[0] * block.scale, qkv[1], qkv[2]
+    attn = q @ k.transpose(-2, -1) # [B, heads, 1+HW, 1+HW]
 
+    if mask_i is not None:
+        attn[:, :, :, mask_i] = float("-inf")
+    attn = attn.softmax(dim=-1)
+    attn = block.attn_drop(attn)
 
+    x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+    x = block.proj(x)
+    x = block.proj_drop(x)
 
+    return x 
+
+def run_block(block, x, mask_i):
+    x = x + block.ls1(attn(block.attn, block.norm1(x), mask_i))
+    x = x + block.ls2(block.mlp(block.norm2(x)))
+    return x
+    
 class MST(BasicClassifier):
     def __init__(
         self, 
@@ -50,57 +71,72 @@ class MST(BasicClassifier):
             self.register_hooks()
 
         x = x.repeat(1, 3, 1, 1) # Gray to RGB
-        x = self.model(x) #  -> [B, out] 
-        # x = self.model(x, is_training=True)
-
-
+        
+    
         if save_attn:
+            x = self.model(x, is_training=True)
             # torch.backends.mha.set_fastpath_enabled(fastpath_enabled)
             self.deregister_hooks()
             return x 
+
+        x = self.model(x) #  -> [B, out] 
         
         x = self.linear(x)
         return x
     
-    def forward_attention(self, x_in, target_class=0):
+
+
+        
+
+
+    def forward_mask(self, block, x, mask_i):
+        """
+        Recompute the class token representation with the contribution of one patch token removed.
+        """
+        x = run_block(block, x, mask_i)
+        x_norm = self.model.norm(x)
+        x_norm_clstoken = x_norm[:, 0]
+        pred = self.linear(x_norm_clstoken)
+        return pred
+    
+    def forward_attention(self, x_in):
         with torch.no_grad():
-            x = self.forward(x_in, save_attn=True)
-            hidden_state = x['x_norm_patchtokens'] 
-            x = x['x_norm_clstoken']
-            pred = self.linear(x) # [B, out]
+            x = self.model.prepare_tokens_with_masks(x_in.repeat(1, 3, 1, 1))
+            for blk in self.model.blocks[:-1]:
+                x = blk(x)
 
-        contributions = hidden_state[0]@self.linear.weight.T # (seq_len, num_labels)
-        cls_attention = self.get_plane_attention() # [B, HW]   # (batch, seq_len)
+            # Compute normal output 
+            pred =  self.forward_mask(self.model.blocks[-1], x, None)
+            
+            # Compute last block with masked attention 
+            token_relevance = []
+            for token_i in range(1, x.shape[1]):
+                pred_i = self.forward_mask(self.model.blocks[-1], x, token_i)
+                rel_change = (pred.sigmoid() - pred_i.sigmoid()).abs() 
+                token_relevance.append(rel_change)
 
-        # Attention of the labels to the CLS token
-        token_relevance = cls_attention.T * contributions
+        token_relevance = torch.stack(token_relevance, dim=1)
 
-        token_relevance -= token_relevance.min(dim=0).values
-        token_relevance /= token_relevance.sum(dim=0)
+        # with torch.no_grad():
+        #     x = self.forward(x_in, save_attn=True)
+        #     hidden_state = x['x_norm_patchtokens'] # [B, tokens, E]
+        #     x = x['x_norm_clstoken']
+        #     pred = self.linear(x) # [B, out]
 
-        return pred, token_relevance
 
-        # # Create gradients 
-        # x.requires_grad_()  # Enable gradient tracking for x
-        # self.linear.zero_grad()  # Zero out previous grads
-        # pred = self.linear(x)   # Get the prediction
-        # pred_target = pred[:, target_class] # Select the target class  # Create a tensor of shape [B, out]
-
-        # # Backpropagate for the target class
-        # pred_target.backward()
-
-        # # Get gradients of x (feature map before linear)
-        # attention_label2cls = x.grad  # Shape: [B, Labels]
-        # attention_label2cls = attention_label2cls.unsqueeze(-1) # [B, Labels, 1]
-
-        # # Attention of the CLS token to the input patches
-        # attention_cls2patch = self.get_plane_attention() # [B, HW]
-        # attention_cls2patch = attention_cls2patch.unsqueeze(1) # [B, 1, HW]
+        # contributions = self.linear(hidden_state).sigmoid() # (B, HW, num_labels)
+        # cls_attention = self.get_plane_attention() # [B, HW]   
 
         # # Attention of the labels to the CLS token
-        # attention = attention_label2cls*attention_cls2patch # [B, Labels, HW]
-        
-        # return pred, attention  
+        # token_relevance = cls_attention.unsqueeze(-1) * contributions
+        # token_relevance /= token_relevance.sum(1, keepdim=True)
+
+        # return pred, token_relevance
+
+        return pred, token_relevance
+    
+    
+      
    
     def get_plane_attention(self):
         attention_map_dino = self.attention_maps[-1] # [B, Heads, 1+HW, 1+HW]

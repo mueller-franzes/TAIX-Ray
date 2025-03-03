@@ -48,8 +48,7 @@ def dataset2dict(ds, exclude=['PixelData', 'Overlay Data'] ):
             if get(ds, key) not in exclude}
 
 def read_metadata(path_dcm):
-    meta_dict = {} # 'Path': str(path_dcm.relative_to(path_root_data)) # WARNING: path leak accession numbers
-
+    meta_dict = {'Filename': path_dcm.name} # 'Path': str(path_dcm.relative_to(path_root_data)) # WARNING: path leak accession numbers
     try:
         # Try to read the DICOM file
         ds = pydicom.dcmread(path_dcm, stop_before_pixels=False)
@@ -68,7 +67,7 @@ def read_metadata(path_dcm):
             if pixel_array.max() - pixel_array.min() < 1e-5:
                 return None 
          
-            # Copy the file
+            # Copy the file (WARNING: Multiple files with the same file name for one access number)
             path_out = path_root_out_data / ds.get('PatientID')/ds.get('StudyInstanceUID')/ds.get('SeriesInstanceUID')
             path_out.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path_dcm, path_out/path_dcm.name)
@@ -106,7 +105,12 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"Error processing {futures[future]}: {e}")
 
+    # Using SingleThread 
+    # for path_dcm in paths_series:
+    #     metadata = read_metadata(path_dcm)
+    #     metadata_list.append(metadata)
 
+    metadata_list = [m for m in metadata_list if m is not None]
     df = pd.DataFrame(metadata_list)
     df.to_csv(path_root_out_metadata / 'metadata.csv', index=False)
 

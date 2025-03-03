@@ -16,7 +16,7 @@ from cxr.models import MST
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_dir', type=str, default=Path.cwd())
-    parser.add_argument('--model', type=str, default='ResNet', choices=['ResNet', 'MST']) 
+    parser.add_argument('--model', type=str, default='MST', choices=['ResNet', 'MST']) 
     parser.add_argument('--task', type=str, default="multilabel", choices=['multilabel', 'multiclass'])
     args = parser.parse_args()
 

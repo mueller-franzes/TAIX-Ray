@@ -13,11 +13,11 @@ from concurrent.futures import ThreadPoolExecutor
 class CXR_Dataset(data.Dataset):
     PATH_ROOT = Path('/mnt/ocean_storage/data/UKA/UKA_Thorax/public_export')
     LABELS = [
-        'cardiomegaly', 
-        'congestion',
-        'pleural_effusion_left', 'pleural_effusion_right',
-        'pneumonic_infiltrates_left', 'pneumonic_infiltrates_right', 
-        'atelectasis_left', 'atelectasis_right'
+        'HeartSize', 
+        'PulmonaryCongestion',
+        'PleuralEffusion_Left', 'PleuralEffusion_Right',
+        'PulmonaryOpacities_Left', 'PulmonaryOpacities_Right', 
+        'Atelectasis_Left', 'Atelectasis_Right'
     ]
 
     def __init__(
@@ -57,7 +57,7 @@ class CXR_Dataset(data.Dataset):
         df = self.load_split(self.path_root/'metadata/split.csv', fold=fold, split=split, fraction=fraction)
         
         # Merge with labels 
-        df_labels = pd.read_csv(self.path_root/'metadata/labels.csv')
+        df_labels = pd.read_csv(self.path_root/'metadata/annotations.csv')
         # df = df.merge(df_labels, on=['PatientID', 'StudyInstanceUID', 'SeriesInstanceUID'], how='inner')
         df = df.merge(df_labels, on='UID', how='inner')
 
@@ -66,8 +66,8 @@ class CXR_Dataset(data.Dataset):
 
         if cache_images:
             self.images = {}
-            path_folder = self.path_root/"data_png_resize"
-            with ThreadPoolExecutor(50) as executor:
+            path_folder = self.path_root/"data_png_resize_512"
+            with ThreadPoolExecutor(100) as executor:
                 uid_to_future = {uid: executor.submit(self.load_img, path_folder / f'{uid}.png') for uid in  tqdm(self.df['UID'],  desc="Submitting tasks")}
                 
                 for uid, future in tqdm(uid_to_future.items(), total=len(uid_to_future)):
@@ -98,7 +98,7 @@ class CXR_Dataset(data.Dataset):
         # filename = item['Filename']
         # path_file = self.path_root/static_path_data/rel_path_series/filename
 
-        static_path_data = "data_png_resize"
+        static_path_data = "data_png_resize_512"
         filename = f'{uid}.png'
         path_file = self.path_root/static_path_data/filename
 
