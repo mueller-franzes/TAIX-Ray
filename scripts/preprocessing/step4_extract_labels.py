@@ -1,6 +1,10 @@
 from pathlib import Path 
 import pandas as pd 
 import re
+import hashlib
+
+def hash_id(value):
+    return hashlib.sha256(str(value).encode()).hexdigest()
 
 def extract_value_after_key(text: str, key: str) -> str:
     pattern = rf"{re.escape(key)}\s*:\s*([\S\s]+?)(?:\n|$)"
@@ -20,7 +24,7 @@ def extract_label_heart(text):
         r')\b'
     )
     match = re.search(pattern, text)
-    to_num = {'nicht beurteilbar': -1, 'normal': 0, 'grenzwertig': 1, 'vergrößert': 2, 'massiv vergrößert': 4}
+    to_num = {'nicht beurteilbar': -1, 'normal': 0, 'grenzwertig': 1, 'vergrößert': 2, 'massiv vergrößert': 3}
     # to_num = {'normal': 1, 'grenzwertig': 2, 'vergrößert': 3, 'massiv vergrößert': 4, 'nicht beurteilbar': 5} # old 
     if match:
         canonical = re.sub(r'(es|e|er|em|en)$', '', match.group(0)).strip()
@@ -84,18 +88,30 @@ if __name__ == "__main__":
     path_out_metadata = path_root_out / 'metadata'
     path_out_metadata.mkdir(parents=True, exist_ok=True)
 
+    # translation = {
+    #     'Herzgröße': 'cardiomegaly', 
+    #     'Stauung': 'congestion', 
+    #     'Pleuraerguss': 'pleural_effusion', 
+    #     'Infiltrate': 'pneumonic_infiltrates',
+    #     'Bel.-störungen': 'atelectasis', 
+    # }
+    # german_labels = list(translation.keys())
+    # single_side_labels = [ 'cardiomegaly', 'congestion']
+    # double_side_labels = [ 'pleural_effusion', 'pneumonic_infiltrates', 'atelectasis']
+    # double_side_labels_lr = [ f'{label}_{side}' for label in double_side_labels for side in ['right', 'left']]
+
 
     translation = {
-        'Herzgröße': 'cardiomegaly', 
-        'Stauung': 'congestion', 
-        'Pleuraerguss': 'pleural_effusion', 
-        'Infiltrate': 'pneumonic_infiltrates', # pulmonary_opacities
-        'Bel.-störungen': 'atelectasis', 
+        'Herzgröße': 'HeartSize', 
+        'Stauung': 'PulmonaryCongestion', 
+        'Pleuraerguss': 'PleuralEffusion', 
+        'Infiltrate': 'PulmonaryOpacities', 
+        'Bel.-störungen': 'Atelectasis', 
     }
     german_labels = list(translation.keys())
-    single_side_labels = [ 'cardiomegaly', 'congestion']
-    double_side_labels = [ 'pleural_effusion', 'pneumonic_infiltrates', 'atelectasis']
-    double_side_labels_lr = [ f'{label}_{side}' for label in double_side_labels for side in ['right', 'left']]
+    single_side_labels = [ 'HeartSize', 'PulmonaryCongestion']
+    double_side_labels = [ 'PleuralEffusion', 'PulmonaryOpacities', 'Atelectasis']
+    double_side_labels_lr = [ f'{label}_{side}' for label in double_side_labels for side in ['Right', 'Left']]
 
 
     # Load data
@@ -117,26 +133,39 @@ if __name__ == "__main__":
     df['Geburtsdatum'] = pd.to_datetime(df['Geburtsdatum'], format='%Y-%m-%d')
     df['Age'] = (df['Untersuchungsdatum'] - df['Geburtsdatum']).dt.days
 
+
     # Remove unreasonable age
-    df = df[df['Age']>=0] # Age should be not negative 
-    df = df[df['Age']<365*150] # Age should be smaller than 150 years (max Age 110)
-    print("After removing unresonable age", len(df), "Age range", df['Age'].min()/365, df['Age'].max()/365)
+    # df = df[df['Age']>=0] # Age should be not negative 
+    # df = df[df['Age']<365*150] # Age should be smaller than 150 years (max Age 110)
+    # print("After removing unresonable age", len(df), "Age range", df['Age'].min()/365, df['Age'].max()/365)
 
 
-    # Load mapping ( AccessionNumber -> PseudoAccessionNumber)
+    # --------------------- Load mapping ( AccessionNumber -> PseudoAccessionNumber) ---------------------
     df_mapping = pd.read_csv(path_metadata/'pseudo_table.csv')
     df_mapping = df_mapping.drop_duplicates('AccessionNumber').reset_index(drop=True)
+    df_mapping['PseudoPatientID'] = df_mapping['PatientID'].apply(hash_id) # Fix BUG 
     df_mapping = df_mapping[['AccessionNumber', 'PseudoAccessionNumber', 'PseudoPatientID']]
     df = pd.merge(df_mapping , df, left_on='AccessionNumber', right_on='Untersuchungsnummer', how='inner')
     print("After merging with mapping file", len(df))
     # df_mapping[df_mapping['AccessionNumber'].duplicated(keep=False)].sort_values('AccessionNumber')[['AccessionNumber', 'PseudoAccessionNumber']]
 
-    # # Merge with image data
+    
+    # Remove patients with multiple or unkown genders 
+    df = df.dropna(subset=['Geschlecht'])
+    df = df[df['Geschlecht'].isin(['M', 'W'])] # Removes "U"
+    genders_per_patient = df.groupby('PseudoPatientID')['Geschlecht'].nunique()
+    multi_gender = genders_per_patient[genders_per_patient>1].index
+    df = df[~df['PseudoPatientID'].isin(multi_gender)]
+    df['Sex'] = df['Geschlecht'].map({'M':'M', 'W':'F'})
+    print("After removing patients with multiple or unkown genders", len(df))
+
+    # ----------------------- Merge with image data ----------------------
     df_images = pd.read_csv(path_out_metadata/'metadata.csv', usecols=['PatientName', 'PatientID', 'StudyInstanceUID', 'SeriesInstanceUID', 'Filename'])
     df_images['PseudoAccessionNumber'] = df_images['PatientName'].str.split('_', n=1).str[1]
     assert len(df_images) == len(df_images['PseudoAccessionNumber'].unique()), "Exams with multiple images"
     df = pd.merge(df, df_images, on='PseudoAccessionNumber', how='inner')
     print("After merging with image data", len(df))
+    df['PatientID'] = df['PseudoPatientID'] # TODO: Remove after fix - should be the same. 
 
     # ------------------------ Extract values ---------------------
     # Extract values after labels
@@ -154,14 +183,14 @@ if __name__ == "__main__":
     # ------------------------ Extract labels ---------------------
     # Single value labels
     for key_value in single_side_labels:
-        if key_value == 'cardiomegaly': 
+        if key_value == 'HeartSize': 
             df[key_value] = df[key_value].apply(extract_label_heart)
         else:
             df[key_value] = df[key_value].apply(extract_label)
     
     # Extract labels for left and right separately
     for key_value in double_side_labels:
-        df[f'{key_value}_right'], df[f'{key_value}_left'] = zip(*df[key_value].apply(extract_re_li))
+        df[f'{key_value}_Right'], df[f'{key_value}_Left'] = zip(*df[key_value].apply(extract_re_li))
 
 
     # ------------------------- Cleanup ---------------------------
@@ -177,9 +206,9 @@ if __name__ == "__main__":
 
     # ------------------------- Save --------------------------------
     
-    df_annonymized = df[['PatientID', 'Age', *single_side_labels, *double_side_labels_lr]]
+    df_annonymized = df[['PatientID', 'Age', 'Sex', *single_side_labels, *double_side_labels_lr]]
     df_annonymized.insert(0, 'UID', df['PseudoAccessionNumber'])
-    df_annonymized.to_csv(path_out_metadata/'labels.csv', index=False)
+    df_annonymized.to_csv(path_out_metadata/'annotations.csv', index=False)
 
 
 
