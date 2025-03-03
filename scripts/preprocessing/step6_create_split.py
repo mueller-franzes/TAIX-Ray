@@ -54,14 +54,14 @@ if __name__ == "__main__":
     path_root = Path('/ocean_storage/data/UKA/UKA_Thorax')/'public_export'
     path_root_metadata = path_root/'metadata'
 
-    df = pd.read_csv(path_root_metadata/'labels.csv', dtype={'Patient ID':str})
+    df = pd.read_csv(path_root_metadata/'annotations.csv', dtype={'Patient ID':str})
 
     print("Patients", df['PatientID'].nunique())
     # print("Studies", df['StudyInstanceUID'].nunique())
     # print("Series", df['SeriesInstanceUID'].nunique())
     print("Total", len(df))
 
-    for pathology in df.columns[5:]:
+    for pathology in df.columns[4:]:
         for grade, count in df[pathology].value_counts().sort_index().items():
             print(f"{pathology} Grade {grade}: {count}")
         print("-----------------")

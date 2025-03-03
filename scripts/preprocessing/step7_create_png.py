@@ -27,7 +27,6 @@ if __name__ == "__main__":
     # Setting 
     path_root = Path('/ocean_storage/data/UKA/UKA_Thorax/public_export')
     path_data = path_root/'data'
-    path_metadata = path_root/'metadata'
 
     path_data_out = path_root/'data_png'
     path_data_out.mkdir(parents=True, exist_ok=True)

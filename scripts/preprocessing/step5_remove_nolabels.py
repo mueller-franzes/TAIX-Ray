@@ -7,7 +7,7 @@ path_root = Path('/ocean_storage/data/UKA/UKA_Thorax/public_export')
 path_metadata = path_root / 'metadata'
 path_data = path_root / 'data'
 
-df_labels = pd.read_csv(path_metadata/'labels.csv')
+df_labels = pd.read_csv(path_metadata/'annotations.csv')
 df_images = pd.read_csv(path_metadata/'metadata.csv')
 
 df_images['UID'] = df_images['PatientName'].str.split('_').str[1]

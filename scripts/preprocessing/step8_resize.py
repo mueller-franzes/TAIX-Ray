@@ -9,7 +9,7 @@ def resize(path_png):
     img = Image.open(path_png) # 16bit int
 
     # Determine new size while maintaining aspect ratio
-    target_size = 1024
+    target_size = 512
     w, h = img.size
     
     if h > w:
@@ -18,7 +18,7 @@ def resize(path_png):
         new_w, new_h = target_size, int(h * target_size / w)
     
     # Resize image
-    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    img = img.resize((new_w, new_h), Image.Resampling.BILINEAR)
     
     # Save the resized image
     img.save(path_data_out/path_png.relative_to(path_data) , format='PNG')
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     path_data = path_root/'data_png'
     path_metadata = path_root/'metadata'
     
-    path_data_out = path_root/'data_png_resize_1024'
+    path_data_out = path_root/'data_png_resize_512'
     path_data_out.mkdir(parents=True, exist_ok=True)
 
 
