@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # print("Series", df['SeriesInstanceUID'].nunique())
     print("Total", len(df))
 
-    for pathology in df.columns[4:]:
+    for pathology in df.columns[6:]:
         for grade, count in df[pathology].value_counts().sort_index().items():
             print(f"{pathology} Grade {grade}: {count}")
         print("-----------------")
@@ -70,6 +70,7 @@ if __name__ == "__main__":
     df = df[['UID', 'PatientID']]
 
     df_splits = create_split(df, group_col='PatientID')
+    df_splits = df_splits.drop(columns='PatientID')
     df_splits.to_csv(path_root_metadata/'split.csv', index=False)
 
 
