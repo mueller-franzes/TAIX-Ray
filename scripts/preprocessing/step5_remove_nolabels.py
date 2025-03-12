@@ -22,5 +22,10 @@ assert not (df_remove['PatientID'].isin(df['PatientID'].values)).any(), "Can not
 for patientID in tqdm(df_remove['PatientID'].unique()):
     shutil.rmtree(path_data/patientID) 
 
+# path_data = path_root / 'data_png'
+# for patientID in tqdm(df_remove['UID'].unique()):
+#     path_file = path_data/f'{patientID}.png'
+#     if path_file.is_file():
+#         path_file.unlink() 
 
 df.to_csv(path_metadata/'metadata.csv', index=False)
