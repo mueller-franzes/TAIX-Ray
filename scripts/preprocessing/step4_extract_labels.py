@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd 
 import re
 import hashlib
+import numpy as np
 
 def hash_id(value):
     return hashlib.sha256(str(value).encode()).hexdigest()
@@ -119,7 +120,7 @@ if __name__ == "__main__":
     print("Original data", len(df))
 
     # Remvoe rows with missing values
-    df = df.dropna(subset=[ 'Untersuchungsnummer', 'Geburtsdatum', 'Untersuchungsdatum',  'Dokumentinhalt']).reset_index(drop=True)
+    df = df.dropna(subset=[ 'Untersuchungsnummer', 'Geburtsdatum', 'Untersuchungsdatum', 'Befundarzt', 'Dokumentinhalt']).reset_index(drop=True)
     print("After removing missing values", len(df))
 
     # Remove duplicates
@@ -133,6 +134,12 @@ if __name__ == "__main__":
     df['Geburtsdatum'] = pd.to_datetime(df['Geburtsdatum'], format='%Y-%m-%d')
     df['Age'] = (df['Untersuchungsdatum'] - df['Geburtsdatum']).dt.days
 
+    # Blur exact exaimation date 
+    random_offsets = np.random.randint(-100, 101, size=len(df))
+    df['StudyDate'] =  df['Untersuchungsdatum'] +  pd.to_timedelta(random_offsets, unit="D")
+
+    # Anonyimzed 
+    df['PhysicianID'] = df['Befundarzt'].apply(hash_id)
 
     # Remove unreasonable age
     # df = df[df['Age']>=0] # Age should be not negative 
@@ -206,7 +213,7 @@ if __name__ == "__main__":
 
     # ------------------------- Save --------------------------------
     
-    df_annonymized = df[['PatientID', 'Age', 'Sex', *single_side_labels, *double_side_labels_lr]]
+    df_annonymized = df[['PatientID', 'PhysicianID', 'StudyDate', 'Age', 'Sex', *single_side_labels, *double_side_labels_lr]]
     df_annonymized.insert(0, 'UID', df['PseudoAccessionNumber'])
     df_annonymized.to_csv(path_out_metadata/'annotations.csv', index=False)
 
