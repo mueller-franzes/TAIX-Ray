@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from torchmetrics import AUROC, Accuracy
-
+from torchmetrics import AUROC, Accuracy, MeanAbsoluteError
+from .utils.losses import CornLossMulti
 
 class VeryBasicModel(pl.LightningModule):
     def __init__(self, save_hyperparameters=True):
@@ -106,7 +106,7 @@ class BasicModel(VeryBasicModel):
         optimizer = self.optimizer(self.parameters(), **self.optimizer_kwargs)
         if self.lr_scheduler is not None:
             lr_scheduler = self.lr_scheduler(optimizer, **self.lr_scheduler_kwargs)
-            lr_scheduler_config  = {"scheduler": lr_scheduler, "interval": "epoch", "frequency": 1}
+            lr_scheduler_config  = {"scheduler": lr_scheduler, "interval": "step", "frequency": 1}
             return [optimizer], [lr_scheduler_config ]
         else:
             return [optimizer]
@@ -118,7 +118,7 @@ class BasicClassifier(BasicModel):
         self, 
         in_ch,
         out_ch,
-        task, # multiclass or multilabel 
+        task, # multiclass or multilabel or binary
         spatial_dims,
         loss = None,
         loss_kwargs = {},
@@ -138,13 +138,14 @@ class BasicClassifier(BasicModel):
 
         if loss is not None:
             loss = loss 
+        elif task == "multiclass":
+            loss = torch.nn.CrossEntropyLoss
+        elif task == "multilabel":
+            loss = torch.nn.BCEWithLogitsLoss
+        elif task == "binary":
+            loss = torch.nn.BCEWithLogitsLoss
         else:
-            if task == "multiclass":
-                loss = torch.nn.CrossEntropyLoss
-            elif task == "multilabel":
-                loss = torch.nn.BCEWithLogitsLoss
-            else:
-                raise ValueError("Unknown task")
+            raise ValueError("Unknown task and loss not provided")
 
         self.loss_func = loss(**loss_kwargs)
         self.loss_kwargs = loss_kwargs 
@@ -155,6 +156,11 @@ class BasicClassifier(BasicModel):
         elif task == "multilabel":
             aucroc_kwargs.update({"task":"multilabel", 'num_labels':out_ch}) 
             acc_kwargs.update({"task":"multilabel", 'num_labels':out_ch}) 
+        elif task == "binary":
+            aucroc_kwargs.update({"task":"binary"}) 
+            acc_kwargs.update({"task":"binary"}) 
+
+
 
         self.auc_roc = nn.ModuleDict({state:AUROC(**aucroc_kwargs) for state in ["train_", "val_", "test_"]}) # 'train' not allowed as key
         self.acc = nn.ModuleDict({state:Accuracy(**acc_kwargs) for state in ["train_", "val_", "test_"]})
@@ -194,6 +200,83 @@ class BasicClassifier(BasicModel):
             value.reset()
 
     def compute_loss(self, pred, target):
-        if self.task == "multilabel":
+        if self.task in ["multilabel", 'binary']:
             target = target.float()
+        return self.loss_func(pred, target)
+    
+
+
+class BasicRegression(BasicModel):
+    def __init__(
+        self, 
+        in_ch,
+        out_ch,
+        task, # ordinal, absolute
+        spatial_dims,
+        loss = None,
+        loss_kwargs = {},
+        optimizer=torch.optim.AdamW, 
+        optimizer_kwargs={'lr':1e-4, 'weight_decay':1e-2},
+        lr_scheduler= None, 
+        lr_scheduler_kwargs={},
+        save_hyperparameters=True,
+    ):
+        super().__init__(optimizer, optimizer_kwargs, lr_scheduler, lr_scheduler_kwargs, save_hyperparameters)
+        self.in_ch = in_ch 
+        self.out_ch = out_ch 
+        self.task = task 
+        self.spatial_dims = spatial_dims
+
+        if loss is not None:
+            loss = loss 
+        elif task == "ordinal":
+            loss = CornLossMulti
+        elif task == "absolute":
+            loss = nn.L1Loss
+        else:
+            raise ValueError("Unknown task")
+
+        self.loss_func = loss(**loss_kwargs)
+        self.loss_kwargs = loss_kwargs 
+
+
+        self.mae = nn.ModuleDict({state:MeanAbsoluteError() for state in ["train_", "val_", "test_"]}) # 'train' not allowed as key
+
+    
+    def _step(self, batch: dict, batch_idx: int, state: str, step: int):
+        source = batch['source']
+        target = batch['target'] # ordinal: [B, num_classes]
+
+        batch_size = source.shape[0]
+        self.batch_size = batch_size 
+
+        # Run Model 
+        pred = self(source) # MAE expects [B, num_classes], CORN expects [B, num_classes*(num_labels-1)]
+
+        # ------------------------- Compute Loss ---------------------------
+        logging_dict = {}
+        logging_dict['loss'] = self.compute_loss(pred, target)
+
+        # --------------------- Compute Metrics  -------------------------------
+        if self.loss_func.__class__.__name__ == "CornLossMulti":
+            pred = self.loss_func.logits2labels(pred)
+
+        with torch.no_grad():
+            # Aggregate here to compute for entire set later 
+            self.mae[state+"_"].update(pred, target)
+            
+            # ----------------- Log Scalars ----------------------
+            for metric_name, metric_val in logging_dict.items():
+                self.log(f"{state}/{metric_name}", metric_val, batch_size=batch_size, on_step=True, on_epoch=True, 
+                         sync_dist=False) 
+
+        return logging_dict['loss'] 
+
+    def _epoch_end(self, state):
+        for name, value in [("MAE", self.mae[state+"_"]), ]:
+            self.log(f"{state}/{name}", value.compute(), batch_size=self.batch_size, on_step=False, on_epoch=True, 
+                     sync_dist=True)
+            value.reset()
+
+    def compute_loss(self, pred, target):
         return self.loss_func(pred, target)

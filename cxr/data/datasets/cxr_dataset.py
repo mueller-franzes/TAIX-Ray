@@ -3,6 +3,7 @@ import pandas as pd
 import torch.utils.data as data 
 import torch  
 from torchvision import transforms as T
+import torchvision.transforms.functional as Tf 
 import torch.nn as nn
 import numpy as np 
 from tqdm import tqdm
@@ -10,15 +11,45 @@ import pydicom
 from PIL import Image 
 from concurrent.futures import ThreadPoolExecutor
 
+
+
+class ResizeLongEdge(nn.Module):
+    def __init__(self, long_edge=448, interpolation=Image.BILINEAR, antialias=True):
+        super().__init__()
+        self.long_edge = long_edge
+        self.interpolation = interpolation
+        self.antialias = antialias
+
+    def __call__(self, img):
+        if isinstance(img, Image.Image):  # PIL Image
+            w, h = img.size  
+        elif isinstance(img, torch.Tensor):  # PyTorch Tensor
+            h, w = img.shape[-2:]  
+        else:
+            raise TypeError(f"Expected PIL Image or Tensor, but got {type(img)}")
+
+        if w > h:
+            new_w, new_h = self.long_edge, int(h * (self.long_edge / w))
+        else:
+            new_w, new_h = int(w * (self.long_edge / h)), self.long_edge
+        return Tf.resize(img, (new_h, new_w), self.interpolation, antialias=self.antialias)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(long_edge={self.long_edge}, interpolation={self.interpolation})"
+
+
 class CXR_Dataset(data.Dataset):
     PATH_ROOT = Path('/mnt/ocean_storage/data/UKA/UKA_Thorax/public_export')
-    LABELS = [
-        'HeartSize', 
-        'PulmonaryCongestion',
-        'PleuralEffusion_Left', 'PleuralEffusion_Right',
-        'PulmonaryOpacities_Left', 'PulmonaryOpacities_Right', 
-        'Atelectasis_Left', 'Atelectasis_Right'
-    ]
+    CLASS_LABELS = {
+        'HeartSize': ['Normal', 'Borderline', 'Enlarged', 'Massively'],
+        'PulmonaryCongestion': ['None', '(+)', '+', '++', '+++'],
+        'PleuralEffusion_Left': ['None', '(+)', '+', '++', '+++'],
+        'PleuralEffusion_Right': ['None', '(+)', '+', '++', '+++'],
+        'PulmonaryOpacities_Left': ['None', '(+)', '+', '++', '+++'],
+        'PulmonaryOpacities_Right': ['None', '(+)', '+', '++', '+++'],
+        'Atelectasis_Left': ['None', '(+)', '+', '++', '+++'],
+        'Atelectasis_Right': ['None', '(+)', '+', '++', '+++'],
+    }
 
     def __init__(
             self,
@@ -33,16 +64,25 @@ class CXR_Dataset(data.Dataset):
             random_center=False,
             random_rotate=False,
             random_inverse=False,
-            cache_images=False
+            cache_images=False,
+            regression=False
         ):
         self.path_root = Path(self.PATH_ROOT if path_root is None else path_root)
         self.split = split
-        self.label = label if label is not None else self.LABELS
+        if label is None:
+            self.label = list(self.CLASS_LABELS.keys())
+        elif isinstance(label, str):
+            self.label = [label]
+        else:
+            self.label = label
+        self.class_labels_num = [len(self.CLASS_LABELS[l])-1 for l in self.label] # Remove -1 for CORN 
+
         self.cache_images = cache_images
+        self.regression = regression
 
         if transform is None: 
             self.transform = T.Compose([
-                # T.Resize(448, max_size=512),
+                # ResizeLongEdge(448),
                 T.RandomCrop((448, 448), pad_if_needed=True, padding_mode='constant', fill=0) if random_center else T.CenterCrop((448, 448)),
                 T.Lambda(lambda x: x.transpose(1, 2) if torch.rand((1,),)[0]<0.5 else x ) if random_rotate else T.Lambda(lambda x: x),
                 T.RandomHorizontalFlip() if random_hor_flip else nn.Identity(),
@@ -85,13 +125,12 @@ class CXR_Dataset(data.Dataset):
         img = np.array(img).astype(np.float32)
         return img
 
-    def __getitem__(self, index):
-        idx = self.item_pointers[index]
-        item = self.df.loc[idx]
+    def load_item(self, item):
         uid = item['UID']
-        label = np.stack(item[self.label].values) if isinstance(self.label, list) else item[self.label] 
+        label = np.stack(item[self.label].values) # if len(self.label)>1 else item[self.label[0]] 
 
-        label = (label > 1).astype(int)
+        if not self.regression:
+            label = (label > 1).astype(int) # WARNING: Assumes no missing or "-1" labels 
 
         # static_path_data = "data"
         # rel_path_series = Path(item['PatientID'])/item['StudyInstanceUID']/item['SeriesInstanceUID']
@@ -117,6 +156,12 @@ class CXR_Dataset(data.Dataset):
         img = self.transform(img)
         
         return {'uid':uid, 'source':img, 'target':label }
+
+
+    def __getitem__(self, index):
+        idx = self.item_pointers[index]
+        item = self.df.loc[idx]
+        return self.load_item(item)
 
 
 

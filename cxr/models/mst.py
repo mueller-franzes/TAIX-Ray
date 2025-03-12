@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn 
 import torchvision.models as models
 import  torch.optim.lr_scheduler as lr_scheduler
+from transformers import AutoModel
 
-
-from .base_model import BasicClassifier
+from .base_model import BasicClassifier, BasicRegression
 
 def attn(block, x, mask_i=None):
     # forward_orig.__self__
@@ -31,12 +31,14 @@ def run_block(block, x, mask_i):
     x = x + block.ls2(block.mlp(block.norm2(x)))
     return x
     
-class MST(BasicClassifier):
+
+
+class MSTRegression(BasicRegression):
     def __init__(
         self, 
         in_ch, 
         out_ch, 
-        task="multilabel",
+        task="ordinal",
         spatial_dims=2,
         optimizer_kwargs={'lr':1e-6, 'weight_decay':1e-2},
         # lr_scheduler= lr_scheduler.LinearLR, 
@@ -50,9 +52,47 @@ class MST(BasicClassifier):
                          **kwargs
                         )
 
+        self.model = torch.hub.load('facebookresearch/dinov2', f'dinov2_vits14')
+        emb_ch = self.model.num_features 
+        self.linear = nn.Linear(emb_ch, out_ch)
+
+    def forward(self, x_in, **kwargs):
+        x = x_in.to(self.device) # [B, 1, H, W]
+        B, *_ = x.shape
+        x = x.repeat(1, 3, 1, 1) # Gray to RGB
+        x = self.model(x) #  -> [B, out] 
+        x = self.linear(x)
+        return x
+    
+
+
+
+
+class MST(BasicClassifier):
+    def __init__(
+        self, 
+        in_ch, 
+        out_ch, 
+        task="multilabel",
+        spatial_dims=2,
+        optimizer_kwargs={'lr':1e-6, 'weight_decay':1e-2},
+        # optimizer_kwargs={'lr':5e-4, 'weight_decay':1e-2},
+        # lr_scheduler= lr_scheduler.LinearLR, 
+        # lr_scheduler_kwargs={'start_factor':1e-3, 'total_iters':10000},
+        **kwargs
+    ):
+        super().__init__(in_ch, out_ch, task, spatial_dims,
+                         optimizer_kwargs=optimizer_kwargs, 
+                        #  lr_scheduler=lr_scheduler, 
+                        #  lr_scheduler_kwargs=lr_scheduler_kwargs, 
+                         **kwargs
+                        )
+
 
         self.model = torch.hub.load('facebookresearch/dinov2', f'dinov2_vits14')
+        # self.model = AutoModel.from_pretrained("microsoft/rad-dino")
 
+        # emb_ch = 768 
         emb_ch = self.model.num_features 
         self.linear = nn.Linear(emb_ch, out_ch)
 
@@ -80,7 +120,7 @@ class MST(BasicClassifier):
             return x 
 
         x = self.model(x) #  -> [B, out] 
-        
+        # x = x.pooler_output
         x = self.linear(x)
         return x
     

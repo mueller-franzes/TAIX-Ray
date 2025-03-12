@@ -1,2 +1,2 @@
-from .mst import MST
+from .mst import MST, MSTRegression
 from .resnet import ResNet

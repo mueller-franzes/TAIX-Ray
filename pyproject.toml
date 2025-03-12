@@ -21,6 +21,8 @@ dependencies = [
     "scikit-learn=="1.6.1",
     "wandb==0.19.6",
     "einops==0.8.1",
+    "coral-pytorch==1.4.0",
+    "datasets==3.3.2"
 ]
 
 [tool.setuptools.packages.find]

@@ -6,19 +6,23 @@ import torch
 from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 from cxr.data.datasets import CXR_Dataset
 from cxr.data.datamodules import DataModule
-from cxr.models import ResNet
-from cxr.models import MST
+from cxr.models import ResNet, MST, MSTRegression
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_dir', type=str, default=Path.cwd())
     parser.add_argument('--model', type=str, default='MST', choices=['ResNet', 'MST']) 
-    parser.add_argument('--task', type=str, default="multilabel", choices=['multilabel', 'multiclass'])
+    parser.add_argument('--task', type=str, default="binary", choices=['multilabel', 'multiclass', 'binary', 'ordinal', 'absolute'])
+    parser.add_argument('--label', type=str, default="none", choices=list(CXR_Dataset.CLASS_LABELS.keys())+['none'])
+    parser.add_argument('--regression', action='store_true')
     args = parser.parse_args()
+    regression = False #args.regression
+    label = args.label if args.label != 'none' else None
 
     #------------ Settings/Defaults ----------------
     torch.set_float32_matmul_precision('high')
@@ -26,23 +30,24 @@ if __name__ == "__main__":
     path_run_dir = Path(args.run_dir) / 'runs'  / f'{args.model}_{current_time}'
     path_run_dir.mkdir(parents=True, exist_ok=True)
     accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
-
+    
 
     # ------------ Load Data ----------------
-    ds_train = CXR_Dataset(split='train', cache_images=True, random_center=True, random_ver_flip=True, random_rotate=True)
-    ds_val = CXR_Dataset(split='val', cache_images=True)
+    ds_train = CXR_Dataset(split='train', regression=regression, label=label, cache_images=True, random_center=True, random_ver_flip=True, random_rotate=True)
+    ds_val = CXR_Dataset(split='val', regression=regression, label=label, cache_images=True)
     
     samples = len(ds_train) + len(ds_val)
     batch_size = 32
     accumulate_grad_batches = 1 
     steps_per_epoch = samples / batch_size / accumulate_grad_batches
 
-    if args.task == "multiclass":
-        class_counts = ds_train.df[ds_train.label].value_counts()
-        class_weights = 0.5 / class_counts
-        weights = ds_train.df[ds_train.label].map(lambda x: class_weights[x]).values
-    else:
-        weights = None
+    weights = None 
+    if label is not None:
+        class_counts = ds_train.df[label].value_counts()
+        class_weights = 1 / class_counts / len(class_counts)
+        weights = ds_train.df[label].map(lambda x: class_weights[x]).values
+    
+
 
     dm = DataModule(
         ds_train=ds_train,
@@ -55,28 +60,35 @@ if __name__ == "__main__":
     )
 
     # ------------ Initialize Model ------------
-    out_ch = 2 if args.task=="multiclass" else len(ds_train.label)
-    MODEL = ResNet if args.model == 'ResNet' else MST
+    loss_kwargs = {}
+    out_ch = len(ds_train.label)
+    if regression and (args.task== "ordinal"):
+        out_ch = sum(ds_train.class_labels_num)  
+        loss_kwargs={'class_labels_num': ds_train.class_labels_num} 
+
+    model_map = {
+        'ResNet': ResNet, # ResNetRegression if regression else ResNet,
+        'MST': MSTRegression if regression else MST
+    }
+    MODEL = model_map.get(args.model, None)
     model = MODEL(
         in_ch=1, 
         out_ch=out_ch,
-        task=args.task
+        task= args.task, 
+        loss_kwargs=loss_kwargs
     )
-
-    # Load pretrained model 
-    # model = ResNet.load_from_checkpoint('runs/DUKE/2024_11_14_132823/epoch=41-step=17514.ckpt')
 
 
     # -------------- Training Initialization ---------------
-    to_monitor = "val/AUC_ROC"  
-    min_max = "max"
+    to_monitor = "val/MAE" if regression else "val/AUC_ROC"
+    min_max = "min" if regression else "max"
     log_every_n_steps = 50
-    logger = WandbLogger(project='CXR', name=f"{type(model).__name__}_{current_time}", log_model=False)
-
+    logger = WandbLogger(project='CXR', name=f"{type(model).__name__}_{current_time}_{args.label}", log_model=False)
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     early_stopping = EarlyStopping(
         monitor=to_monitor,
         min_delta=0.0, # minimum change in the monitored quantity to qualify as an improvement
-        patience=25, # number of checks with no improvement
+        patience=10, # number of checks with no improvement
         mode=min_max
     )
     checkpointing = ModelCheckpoint(
@@ -92,7 +104,7 @@ if __name__ == "__main__":
         accumulate_grad_batches=accumulate_grad_batches,
         precision='16-mixed',
         default_root_dir=str(path_run_dir),
-        callbacks=[checkpointing, early_stopping],
+        callbacks=[checkpointing, early_stopping, lr_monitor],
         enable_checkpointing=True,
         check_val_every_n_epoch=1,
         log_every_n_steps=log_every_n_steps,
