@@ -11,7 +11,15 @@ import pydicom
 from PIL import Image 
 from concurrent.futures import ThreadPoolExecutor
 
-
+class OneOf(nn.Module):
+    def __init__(self, transforms):
+        super().__init__()
+        self.transforms = transforms
+        
+    def forward(self, x):
+        # Randomly select one transform from the list
+        t_idx = torch.randint(0, len(self.transforms), (1,)).item()
+        return self.transforms[t_idx](x)
 
 class ResizeLongEdge(nn.Module):
     def __init__(self, long_edge=448, interpolation=Image.BILINEAR, antialias=True):
@@ -40,9 +48,19 @@ class ResizeLongEdge(nn.Module):
 
 class CXR_Dataset(data.Dataset):
     PATH_ROOT = Path('/mnt/ocean_storage/data/UKA/UKA_Thorax/public_export')
+    # CLASS_LABELS = {
+    #     'HeartSize': ['Normal', 'Borderline', 'Enlarged', 'Massively'],
+    #     'PulmonaryCongestion':  ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'], 
+    #     'PleuralEffusion_Left': ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'],
+    #     'PleuralEffusion_Right': ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'],
+    #     'PulmonaryOpacities_Left': ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'],
+    #     'PulmonaryOpacities_Right': ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'],
+    #     'Atelectasis_Left': ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'],
+    #     'Atelectasis_Right': ['None', 'Questionable', 'Mild', 'Moderate', 'Severe'],
+    # }
     CLASS_LABELS = {
         'HeartSize': ['Normal', 'Borderline', 'Enlarged', 'Massively'],
-        'PulmonaryCongestion': ['None', '(+)', '+', '++', '+++'],
+        'PulmonaryCongestion':  ['None', '(+)', '+', '++', '+++'], 
         'PleuralEffusion_Left': ['None', '(+)', '+', '++', '+++'],
         'PleuralEffusion_Right': ['None', '(+)', '+', '++', '+++'],
         'PulmonaryOpacities_Left': ['None', '(+)', '+', '++', '+++'],
@@ -50,6 +68,7 @@ class CXR_Dataset(data.Dataset):
         'Atelectasis_Left': ['None', '(+)', '+', '++', '+++'],
         'Atelectasis_Right': ['None', '(+)', '+', '++', '+++'],
     }
+
 
     def __init__(
             self,
@@ -75,18 +94,21 @@ class CXR_Dataset(data.Dataset):
             self.label = [label]
         else:
             self.label = label
-        self.class_labels_num = [len(self.CLASS_LABELS[l])-1 for l in self.label] # Remove -1 for CORN 
+        # self.class_labels_num = [len(self.CLASS_LABELS[l])-1 for l in self.label] # Remove -1 for CORN 
+        self.class_labels_num = [len(self.CLASS_LABELS[l]) for l in self.label] 
 
         self.cache_images = cache_images
         self.regression = regression
 
         if transform is None: 
             self.transform = T.Compose([
-                # ResizeLongEdge(448),
+                ResizeLongEdge(448),
                 T.RandomCrop((448, 448), pad_if_needed=True, padding_mode='constant', fill=0) if random_center else T.CenterCrop((448, 448)),
-                T.Lambda(lambda x: x.transpose(1, 2) if torch.rand((1,),)[0]<0.5 else x ) if random_rotate else T.Lambda(lambda x: x),
+                OneOf([
+                    T.Lambda(lambda x: x.transpose(1, 2) if torch.rand((1,),)[0]<0.5 else x ) if random_rotate else T.Lambda(lambda x: x),
+                    T.RandomVerticalFlip() if random_ver_flip else nn.Identity(),
+                ]),
                 T.RandomHorizontalFlip() if random_hor_flip else nn.Identity(),
-                T.RandomVerticalFlip() if random_ver_flip else nn.Identity(),
                 T.Lambda(lambda x:-x if torch.rand((1,),)[0]<0.5 else x) if random_inverse else T.Lambda(lambda x: x),
             ])         
         else:
@@ -148,12 +170,16 @@ class CXR_Dataset(data.Dataset):
         
         img = torch.from_numpy(img)[None] # [1, H, W]
 
-        # mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
+        #mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
+        # mask = (img>img.min()) & (img<img.max())
         # img = (img-img[mask].mean())/img[mask].std()
 
-        img = (img-img.mean())/img.std()
 
         img = self.transform(img)
+
+        # img = (img-img.mean())/img.std()
+        mask = (img>img.min()) & (img<img.max())
+        img = (img-img[mask].mean())/img[mask].std()
         
         return {'uid':uid, 'source':img, 'target':label }
 

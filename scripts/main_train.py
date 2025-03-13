@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument('--label', type=str, default="none", choices=list(CXR_Dataset.CLASS_LABELS.keys())+['none'])
     parser.add_argument('--regression', action='store_true')
     args = parser.parse_args()
-    regression = False #args.regression
+    regression = args.regression
     label = args.label if args.label != 'none' else None
 
     #------------ Settings/Defaults ----------------
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     
 
     # ------------ Load Data ----------------
-    ds_train = CXR_Dataset(split='train', regression=regression, label=label, cache_images=True, random_center=True, random_ver_flip=True, random_rotate=True)
-    ds_val = CXR_Dataset(split='val', regression=regression, label=label, cache_images=True)
+    ds_train = CXR_Dataset(split='train', regression=regression, label=label, cache_images=False, random_center=True, random_ver_flip=True, random_rotate=True)
+    ds_val = CXR_Dataset(split='val', regression=regression, label=label, cache_images=False)
     
     samples = len(ds_train) + len(ds_val)
     batch_size = 32

@@ -1,25 +1,46 @@
 import torch 
 from tqdm import tqdm
 
-from cxr.models import MST
+from cxr.models import MST, MSTRegression
 
 from cxr.data.datasets import CXR_Dataset
 from cxr.data.datamodules import DataModule 
 
-label = None 
-ds_test = CXR_Dataset(split='test', label=label)
+# label = None 
+label = None #'HeartSize'
+regression = True
+task = "ordinal"
+ds_train = CXR_Dataset(split='test', label=label, regression=regression)
 
 
 device=torch.device(f'cuda:0')
 
-task = task="multilabel" if label is None else "multiclass"
-out_ch = 2 if task=="multiclass" else len(ds_test.label)
-model = MST(in_ch=1, out_ch=out_ch, task=task)
+loss_kwargs = {}
+out_ch = len(ds_train.label)
+if regression and (task== "ordinal"):
+    out_ch = sum(ds_train.class_labels_num)  
+    loss_kwargs={'class_labels_num': ds_train.class_labels_num} 
+
+
+if label is not None:
+    class_counts = ds_train.df[label].value_counts()
+    class_weights = 1 / class_counts / len(class_counts)
+    weights = ds_train.df[label].map(lambda x: class_weights[x]).values
+
+MODEL = MSTRegression if regression else MST
+model = MODEL(
+    in_ch=1, 
+    out_ch=out_ch,
+    task= task, 
+    loss_kwargs=loss_kwargs
+)
+
+
 model.to(device)
 model.eval()
 
-dm = DataModule(ds_test=ds_test, batch_size=2, num_workers=0)
-dl = dm.test_dataloader() 
+dm = DataModule(ds_train=ds_train, batch_size=3, num_workers=0)
+dl = dm.train_dataloader() 
 
 
 for idx, batch in tqdm(enumerate(iter(dl))):

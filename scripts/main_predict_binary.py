@@ -52,7 +52,7 @@ def evaluate(gt, nn, nn_pred, label, path_out):
 if __name__ == "__main__":
     #------------ Get Arguments ----------------
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_run', default='runs/MST_2025_03_02_165634_w_aug/epoch=19-step=86240.ckpt', type=str)
+    parser.add_argument('--path_run', default='runs/MST_2025_03_12_115000_w_aug/epoch=20-step=90279.ckpt', type=str)
     parser.add_argument('--label', default='none', type=lambda x: None if x.lower() == 'none' else x) # None will use all labels 
     parser.add_argument('--show_attention', action='store_true')
     args = parser.parse_args()
@@ -146,8 +146,9 @@ if __name__ == "__main__":
     gt = np.stack(df['GT'].values)
     nn = np.stack(df['NN'].values)
     nn_pred = np.stack(df['NN_prob'].values) 
+    labels = list(ds_test.CLASS_LABELS.keys())
     for i in range(gt.shape[1]):
-        evaluate(gt[:, i], nn[:, i], nn_pred[:, i], ds_test.LABELS[i], path_out)
+        evaluate(gt[:, i], nn[:, i], nn_pred[:, i], labels[i], path_out)
 
 
 

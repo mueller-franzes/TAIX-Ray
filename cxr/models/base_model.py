@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torchmetrics import AUROC, Accuracy, MeanAbsoluteError
-from .utils.losses import CornLossMulti
+from .utils.losses import CornLossMulti, CELossMulti
 
 class VeryBasicModel(pl.LightningModule):
     def __init__(self, save_hyperparameters=True):
@@ -230,7 +230,8 @@ class BasicRegression(BasicModel):
         if loss is not None:
             loss = loss 
         elif task == "ordinal":
-            loss = CornLossMulti
+            # loss = CornLossMulti
+            loss = CELossMulti
         elif task == "absolute":
             loss = nn.L1Loss
         else:
@@ -258,7 +259,7 @@ class BasicRegression(BasicModel):
         logging_dict['loss'] = self.compute_loss(pred, target)
 
         # --------------------- Compute Metrics  -------------------------------
-        if self.loss_func.__class__.__name__ == "CornLossMulti":
+        if self.task == "ordinal":
             pred = self.loss_func.logits2labels(pred)
 
         with torch.no_grad():
