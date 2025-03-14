@@ -102,7 +102,7 @@ class CXR_Dataset(data.Dataset):
 
         if transform is None: 
             self.transform = T.Compose([
-                ResizeLongEdge(448),
+                # ResizeLongEdge(448),
                 T.RandomCrop((448, 448), pad_if_needed=True, padding_mode='constant', fill=0) if random_center else T.CenterCrop((448, 448)),
                 OneOf([
                     T.Lambda(lambda x: x.transpose(1, 2) if torch.rand((1,),)[0]<0.5 else x ) if random_rotate else T.Lambda(lambda x: x),
@@ -177,9 +177,9 @@ class CXR_Dataset(data.Dataset):
 
         img = self.transform(img)
 
-        # img = (img-img.mean())/img.std()
-        mask = (img>img.min()) & (img<img.max())
-        img = (img-img[mask].mean())/img[mask].std()
+        img = (img-img.mean())/img.std()
+        # mask = (img>img.min()) & (img<img.max())
+        # img = (img-img[mask].mean())/img[mask].std()
         
         return {'uid':uid, 'source':img, 'target':label }
 

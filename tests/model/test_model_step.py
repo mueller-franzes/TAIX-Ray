@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 
 from cxr.models import MST, MSTRegression
-
+from cxr.models import ResNet, ResNetRegression
 from cxr.data.datasets import CXR_Dataset
 from cxr.data.datamodules import DataModule 
 
@@ -27,7 +27,7 @@ if label is not None:
     class_weights = 1 / class_counts / len(class_counts)
     weights = ds_train.df[label].map(lambda x: class_weights[x]).values
 
-MODEL = MSTRegression if regression else MST
+MODEL = ResNetRegression if regression else MST
 model = MODEL(
     in_ch=1, 
     out_ch=out_ch,

@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 
 from cxr.data.datasets import CXR_Dataset
 from cxr.data.datamodules import DataModule
-from cxr.models import ResNet, MST, MSTRegression
+from cxr.models import ResNet, ResNetRegression, MST, MSTRegression
 
 
 if __name__ == "__main__":
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     
 
     # ------------ Load Data ----------------
-    ds_train = CXR_Dataset(split='train', regression=regression, label=label, cache_images=False, random_center=True, random_ver_flip=True, random_rotate=True)
-    ds_val = CXR_Dataset(split='val', regression=regression, label=label, cache_images=False)
+    ds_train = CXR_Dataset(split='train', regression=regression, label=label, cache_images=True, random_center=True, random_ver_flip=True, random_rotate=True, random_inverse=False)
+    ds_val = CXR_Dataset(split='val', regression=regression, label=label, cache_images=True)
     
     samples = len(ds_train) + len(ds_val)
     batch_size = 32
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         loss_kwargs={'class_labels_num': ds_train.class_labels_num} 
 
     model_map = {
-        'ResNet': ResNet, # ResNetRegression if regression else ResNet,
+        'ResNet': ResNetRegression if regression else ResNet,
         'MST': MSTRegression if regression else MST
     }
     MODEL = model_map.get(args.model, None)
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     to_monitor = "val/MAE" if regression else "val/AUC_ROC"
     min_max = "min" if regression else "max"
     log_every_n_steps = 50
-    logger = WandbLogger(project='CXR', name=f"{type(model).__name__}_{current_time}_{args.label}", log_model=False)
+    logger = WandbLogger(project='CXR', name=f"{type(model).__name__}_{current_time}_{args.label}_large", log_model=False)
     lr_monitor = LearningRateMonitor(logging_interval='step')
     early_stopping = EarlyStopping(
         monitor=to_monitor,
