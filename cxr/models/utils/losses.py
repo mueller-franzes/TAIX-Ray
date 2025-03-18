@@ -55,8 +55,8 @@ class CELossMulti(torch.nn.Module):
         chunks = torch.split(logits, self.class_labels_num, dim=1)
         loss = 0
         for c, chunk in enumerate(chunks):
-            # loss += F.cross_entropy(chunk, targets[:, c])
-            loss += F.binary_cross_entropy_with_logits(chunk, F.one_hot(targets[:, c], num_classes=self.class_labels_num[c]).float())
+            loss += F.cross_entropy(chunk, targets[:, c])
+            # loss += F.binary_cross_entropy_with_logits(chunk, F.one_hot(targets[:, c], num_classes=self.class_labels_num[c]).float())
         return loss/len(chunks)
 
     def logits2labels(self, logits):
