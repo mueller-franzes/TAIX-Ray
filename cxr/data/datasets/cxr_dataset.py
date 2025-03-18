@@ -152,7 +152,7 @@ class CXR_Dataset(data.Dataset):
         label = np.stack(item[self.label].values) # if len(self.label)>1 else item[self.label[0]] 
 
         if not self.regression:
-            label = (label > 1).astype(int) # WARNING: Assumes no missing or "-1" labels 
+            label = (label > 0).astype(int) # WARNING: Assumes no missing or "-1" labels 
 
         # static_path_data = "data"
         # rel_path_series = Path(item['PatientID'])/item['StudyInstanceUID']/item['SeriesInstanceUID']
@@ -170,10 +170,9 @@ class CXR_Dataset(data.Dataset):
         
         img = torch.from_numpy(img)[None] # [1, H, W]
 
-        #mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
+        # mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
         # mask = (img>img.min()) & (img<img.max())
         # img = (img-img[mask].mean())/img[mask].std()
-
 
         img = self.transform(img)
 
