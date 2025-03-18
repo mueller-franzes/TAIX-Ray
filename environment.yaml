@@ -1,4 +1,4 @@
-name: UKA-CXR
+name: taix-ray
 channels:
   - conda
 dependencies:
