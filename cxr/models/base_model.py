@@ -230,8 +230,8 @@ class BasicRegression(BasicModel):
         if loss is not None:
             loss = loss 
         elif task == "ordinal":
-            # loss = CornLossMulti
-            loss = CELossMulti
+            loss = CornLossMulti
+            # loss = CELossMulti
         elif task == "absolute":
             loss = nn.L1Loss
         else:
