@@ -37,7 +37,7 @@ if __name__ == "__main__":
     ds_val = CXR_Dataset(split='val', regression=regression, label=label, cache_images=True)
     
     samples = len(ds_train) + len(ds_val)
-    batch_size = 32
+    batch_size = 24
     accumulate_grad_batches = 1 
     steps_per_epoch = samples / batch_size / accumulate_grad_batches
 
@@ -72,7 +72,6 @@ if __name__ == "__main__":
     }
     MODEL = model_map.get(args.model, None)
     model = MODEL(
-        in_ch=1, 
         out_ch=out_ch,
         task= args.task, 
         loss_kwargs=loss_kwargs
