@@ -35,14 +35,14 @@ def evaluate(gt, nn, label, label_vals, path_out):
     fig.savefig(path_out/f'confusion_matrix_{label}.png', dpi=300)
 
     #  -------------------------- Agreement -------------------------
-    kappa = cohen_kappa_score(y_true_lab, y_pred_lab, weights="quadratic")
+    kappa = cohen_kappa_score(y_true_lab, y_pred_lab, weights="linear") 
     print(label, "Kappa", kappa)
 
 
 if __name__ == "__main__":
     #------------ Get Arguments ----------------
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_run', default='runs/MST_2025_03_13_112534/epoch=5-step=25794.ckpt', type=str)
+    parser.add_argument('--path_run', default='runs/MST_2025_03_13_220252/epoch=10-step=47289.ckpt', type=str)
     parser.add_argument('--label', default='none', type=lambda x: None if x.lower() == 'none' else x) # None will use all labels 
     args = parser.parse_args()
     batch_size = 16
