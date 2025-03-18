@@ -9,11 +9,16 @@ CLASS_LABELS = CXR_Dataset.CLASS_LABELS
 def get_labels(cls):
     if cls == "HeartSize":
         return ['Normal', 'Borderline', 'Enlarged', 'Massively']
-    return ['None', 'Questionable', 'Mild', 'Moderate', 'Severe']
+    # return ['None', 'Questionable', 'Mild', 'Moderate', 'Severe']
+    return ['None', '(+)', '+', '++', '+++']
 
 
 
 path_root = Path('/ocean_storage/data/UKA/UKA_Thorax')
+
+
+path_out = Path.cwd()/'results'
+path_out.mkdir(exist_ok=True)
 
 path_root_pub = path_root/'public_export'
 path_root_pub_meta = path_root_pub/'metadata' 
@@ -21,7 +26,7 @@ path_root_pub_meta = path_root_pub/'metadata'
 # Read CSV file
 df_lab = pd.read_csv(path_root_pub_meta / 'annotations.csv')
 df_lab['StudyDate'] = pd.to_datetime(df_lab['StudyDate'], format='%Y-%m-%d')
-label_cols = df_lab.columns[6:]
+label_cols = list(CLASS_LABELS.keys()) # df_lab.columns[6:]
 
 # ------------ General Statistics ------------
 print(f"Total samples: {len(df_lab)}")
@@ -48,7 +53,7 @@ data = []
 total_samples = len(df_lab)
 
 # Count occurrences for each label
-for label in df_lab.columns[4:]:    
+for label in label_cols:    
     counts = df_lab[label].value_counts().to_dict()
     row = {i: f"{counts.get(i, 0)} ({(counts.get(i, 0) / total_samples) * 100:.1f}%)" for i in range(len(counts))}
     data.append({**{'Image Finding': label}, **row})
@@ -57,7 +62,7 @@ for label in df_lab.columns[4:]:
 df_counts = pd.DataFrame(data)
 
 # Save to CSV
-df_counts.to_csv('label_counts.csv', index=False)
+df_counts.to_csv(path_out/'label_counts.csv', index=False)
 
 print("CSV file has been saved successfully.")
 
@@ -65,12 +70,31 @@ print("CSV file has been saved successfully.")
 
 
 
+ds = CXR_Dataset(path_root=path_root_pub, fold=0, split=None)
+df = ds.df 
+total = len(df)
+total_patients = df['PatientID'].nunique()
+
+for split in ['train', 'val', 'test']:
+    df_split = df[df['Split']==split]
+    num_patients = df_split['PatientID'].nunique()
+    print(f"----------- {split} -----------")
+    print(f"Examinations {len(df_split)} ({len(df_split)/total*100:.0f}%)")
+    print(f"Patients {df_split['PatientID'].nunique()} ({df_split['PatientID'].nunique()/total_patients*100:.0f}%)")
+    print(f"Mean Age {df_split['Age'].mean()/365:.0f} ± {df_split['Age'].std()/365:.0f}")
+    counts = df_split.groupby('PatientID')['Sex'].apply(lambda x:x.iloc[0]).value_counts()
+
+    print("Male", counts['M'], f"({counts['M']/num_patients*100:.0f}%)")
+    print("Female", counts['F'], f"({counts['F']/num_patients*100:.0f}%)")
+
+
+
 # Set global font sizes
 plt.rcParams.update({
-    'font.size': 14,         # Base font size
+    'font.size': 16,         # Base font size
     'axes.titlesize': 12,    # Title font size
     'axes.labelsize': 16,    # Axis label font size
-    'xtick.labelsize': 14,   # X tick label size
+    'xtick.labelsize': 16,   # X tick label size
 })
 # Set up the figure with subplots
 num_labels = len(label_cols)
@@ -120,7 +144,7 @@ for j in range(i + 1, len(axes)):
 
 # Adjust layout and show plot
 plt.tight_layout()
-plt.savefig('pie_chart.png',  dpi=300)
+plt.savefig(path_out/'label_dist_pie_chart.png',  dpi=300)
 
 
 
@@ -219,4 +243,4 @@ axes[1, 1].set_title("(D) Radiographs per Sex", fontsize=16, fontweight="bold")
 plt.tight_layout()
 
 # Save the combined plot
-plt.savefig("combined_plot.png", dpi=300)
+plt.savefig(path_out/"dataset_stats.png", dpi=300)
