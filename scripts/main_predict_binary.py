@@ -52,7 +52,7 @@ def evaluate(gt, nn, nn_pred, label, path_out):
 if __name__ == "__main__":
     #------------ Get Arguments ----------------
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_run', default='runs/MST_2025_03_12_115000_w_aug/epoch=20-step=90279.ckpt', type=str)
+    parser.add_argument('--path_run', default='runs/MST_2025_03_18_102751_binary_large/mst_ordinal_large.ckpt', type=str)
     parser.add_argument('--label', default='none', type=lambda x: None if x.lower() == 'none' else x) # None will use all labels 
     parser.add_argument('--show_attention', action='store_true')
     args = parser.parse_args()

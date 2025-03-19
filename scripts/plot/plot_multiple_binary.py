@@ -4,14 +4,21 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import ast
-from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score
 
 from cxr.data.datasets import CXR_Dataset
-
+from cxr.utils.roc_curve import bootstrap_metric, auc_bootstrapping, compute_stats
 
 
 def evaluate(y_true, y_score, label, axis):
     fontdict = {'fontsize': 10, 'fontweight': 'bold'}  
+
+    # ------------------------------- ROC-AUC ---------------------------------
+    fprs, tprs, thrs = roc_curve(y_true, y_score, drop_intermediate=False)
+    auc_val = auc(fprs, tprs)
+    tprs, aucs, thrs, mean_fpr = auc_bootstrapping(y_true, y_score)
+    auc_mean, auc_ci, auc_std = compute_stats(aucs)
+    print(f"{label}: AUC = {auc_val:.2f} [{auc_ci[0]:.2f} - {auc_ci[1]:.2f}], STD = {auc_std:.2f}")
 
     cmap = cmap_dict[label.split('_')[0]]  
     #  -------------------------- Confusion Matrix -------------------------
@@ -25,9 +32,12 @@ def evaluate(y_true, y_score, label, axis):
     axis.set_xlabel('Neural Network' , fontdict=fontdict)
     axis.set_ylabel('Physicians' , fontdict=fontdict)
 
+    acc_mean, acc_ci, acc_std = bootstrap_metric(y_true, y_scores_bin, accuracy_score)
+    print(f"{label}: Accuracy = {acc:.2f} [{acc_ci[0]:.2f} - {acc_ci[1]:.2f}], STD = {acc_std:.2f}")
+
     return cm
 
-path_run = Path('results/MST_2025_03_12_115000_w_aug')
+path_run = Path('results/MST_2025_03_18_101740_binary')
 
 cmap_dict = {
     'HeartSize': plt.cm.Reds, 

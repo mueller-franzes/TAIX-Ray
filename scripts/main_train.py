@@ -72,6 +72,7 @@ if __name__ == "__main__":
     }
     MODEL = model_map.get(args.model, None)
     model = MODEL(
+        in_ch = 1,
         out_ch=out_ch,
         task= args.task, 
         loss_kwargs=loss_kwargs

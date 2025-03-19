@@ -11,7 +11,8 @@ from torch.utils.checkpoint import checkpoint
 
 class MSTRegression(BasicRegression):
     def __init__(
-        self, 
+        self,
+        in_ch, 
         out_ch, 
         task="ordinal",
         spatial_dims=2,
@@ -20,14 +21,14 @@ class MSTRegression(BasicRegression):
         # lr_scheduler_kwargs={'start_factor':1e-3, 'total_iters':1000},
         **kwargs
     ):
-        super().__init__(1, out_ch, task, spatial_dims, 
+        super().__init__(in_ch, out_ch, task, spatial_dims, 
                          optimizer_kwargs=optimizer_kwargs, 
                         #  lr_scheduler=lr_scheduler, 
                         #  lr_scheduler_kwargs=lr_scheduler_kwargs, 
                          **kwargs
                         )
 
-        self.model = torch.hub.load('facebookresearch/dinov2', f'dinov2_vitb14')
+        self.model = torch.hub.load('facebookresearch/dinov2', f'dinov2_vits14')
         emb_ch = self.model.num_features 
         self.linear = nn.Linear(emb_ch, out_ch)
 
@@ -45,6 +46,7 @@ class MSTRegression(BasicRegression):
 class MST(BasicClassifier):
     def __init__(
         self,
+        in_ch,
         out_ch, 
         task="binary",
         spatial_dims=2,
@@ -54,14 +56,14 @@ class MST(BasicClassifier):
         # lr_scheduler_kwargs={'start_factor':1e-3, 'total_iters':10000},
         **kwargs
     ):
-        super().__init__(1, out_ch, task, spatial_dims,
+        super().__init__(in_ch, out_ch, task, spatial_dims,
                          optimizer_kwargs=optimizer_kwargs, 
                         #  lr_scheduler=lr_scheduler, 
                         #  lr_scheduler_kwargs=lr_scheduler_kwargs, 
                          **kwargs
                         )
 
-        self.model = torch.hub.load('facebookresearch/dinov2', f'dinov2_vitb14')
+        self.model = torch.hub.load('facebookresearch/dinov2', f'dinov2_vits14')
         emb_ch = self.model.num_features 
         # self.model = AutoModel.from_pretrained("microsoft/rad-dino")
         # emb_ch = 768 

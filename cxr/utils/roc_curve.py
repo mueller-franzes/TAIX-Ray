@@ -2,6 +2,27 @@ import numpy as np
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 import matplotlib
 
+def compute_stats(stats, ci=95):
+    mean = np.mean(stats)
+    lower_bound = np.percentile(stats, (100 - ci) / 2)
+    upper_bound = np.percentile(stats, 100 - (100 - ci) / 2)
+    std_dev = np.std(stats)
+    return mean, (lower_bound, upper_bound), std_dev
+
+def bootstrap_metric(y_true, y_pred, metric_func, n_bootstrap=1000, ci=95, seed=42):
+    """Computes bootstrap confidence intervals for a given metric function."""
+    np.random.seed(seed)  # Set the seed for reproducibility
+    stats = []
+    n = len(y_true)
+
+    for _ in range(n_bootstrap):
+        indices = np.random.choice(n, n, replace=True)  # Resampling with replacement
+        y_true_resampled = y_true[indices]
+        y_pred_resampled = y_pred[indices]
+        stats.append(metric_func(y_true_resampled, y_pred_resampled))
+
+    return compute_stats(stats, ci)
+
 def auc_bootstrapping(y_true, y_score, bootstrapping=1000, drop_intermediate=False):
     tprs, aucs, thrs = [], [], []
     mean_fpr = np.linspace(0, 1, 100)

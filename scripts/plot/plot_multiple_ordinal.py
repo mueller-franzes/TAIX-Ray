@@ -7,16 +7,19 @@ import ast
 from sklearn.metrics import confusion_matrix, accuracy_score, cohen_kappa_score
 
 from cxr.data.datasets import CXR_Dataset
+from cxr.utils.roc_curve import bootstrap_metric
 
-
+def cohen_kappa_score_linear(y_true, y_pred):
+    return cohen_kappa_score(y_true, y_pred, weights="linear")
 
 def evaluate(y_true, y_pred, label, label_vals, axis):
     fontdict = {'fontsize': 10, 'fontweight': 'bold'}    
     cmap = cmap_dict[label.split('_')[0]]  
 
-    kappa = cohen_kappa_score(y_true, y_pred, weights="linear")
-
-    print(f"{kappa:.2f}")
+    #  -------------------------- Agreement -------------------------
+    kappa = cohen_kappa_score_linear(y_true, y_pred)
+    kappa_mean, kappa_ci, kappa_std = bootstrap_metric(y_true, y_pred, cohen_kappa_score_linear)
+    print(f"{label}: Cohen's Kappa = {kappa:.2f} [{kappa_ci[0]:.2f} - {kappa_ci[1]:.2f}], STD = {kappa_std:.2f}")
 
     #  -------------------------- Confusion Matrix -------------------------
     cm = confusion_matrix(y_true, y_pred) # [[TN, FP], [FN, TP]]
@@ -31,10 +34,14 @@ def evaluate(y_true, y_pred, label, label_vals, axis):
     if label == "HeartSize":
         plt.setp(axis.get_xticklabels(), rotation=25, ha='center')
 
+    acc_mean, acc_ci, acc_std = bootstrap_metric(y_true, y_pred, accuracy_score)
+    print(f"{label}: Accuracy = {acc:.2f} [{acc_ci[0]:.2f} - {acc_ci[1]:.2f}], STD = {acc_std:.2f}")
+
+
     return cm
 
 
-path_run = Path('results/MST_2025_03_13_112534')
+path_run = Path('results/MST_2025_03_18_101942_ordinal')
 
 df = pd.read_csv(path_run/'results.csv')
 df['GT'] = df['GT'].apply(ast.literal_eval)

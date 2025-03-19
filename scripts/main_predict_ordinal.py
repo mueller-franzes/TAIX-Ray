@@ -42,7 +42,7 @@ def evaluate(gt, nn, label, label_vals, path_out):
 if __name__ == "__main__":
     #------------ Get Arguments ----------------
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_run', default='runs/MST_2025_03_13_220252/epoch=10-step=47289.ckpt', type=str)
+    parser.add_argument('--path_run', default='runs/MST_2025_03_18_102432_ordinal_large/mst_ordinal_large.ckpt', type=str)
     parser.add_argument('--label', default='none', type=lambda x: None if x.lower() == 'none' else x) # None will use all labels 
     args = parser.parse_args()
     batch_size = 16
