@@ -14,7 +14,8 @@ def _get_resnet_torch(model):
 
 class ResNet(BasicClassifier):
     def __init__(
-        self, 
+        self,
+        in_ch=1, 
         out_ch=1, 
         task="multilabel",
         spatial_dims=2,
@@ -25,7 +26,7 @@ class ResNet(BasicClassifier):
         # lr_scheduler_kwargs={'start_factor':1e-3, 'total_iters':10000},
         **kwargs
     ):
-        super().__init__(1, out_ch, task, spatial_dims, 
+        super().__init__(in_ch, out_ch, task, spatial_dims, 
                     optimizer_kwargs=optimizer_kwargs, 
                     # lr_scheduler=lr_scheduler, 
                     # lr_scheduler_kwargs=lr_scheduler_kwargs, 
@@ -49,6 +50,7 @@ class ResNet(BasicClassifier):
 class ResNetRegression(BasicRegression):
     def __init__(
         self, 
+        in_ch=1,
         out_ch=1, 
         task="ordinal",
         spatial_dims=2,
@@ -59,7 +61,7 @@ class ResNetRegression(BasicRegression):
         # lr_scheduler_kwargs={'start_factor':1e-3, 'total_iters':10000},
         **kwargs
     ):
-        super().__init__(1, out_ch, task, spatial_dims, 
+        super().__init__(in_ch, out_ch, task, spatial_dims, 
                     optimizer_kwargs=optimizer_kwargs, 
                     # lr_scheduler=lr_scheduler, 
                     # lr_scheduler_kwargs=lr_scheduler_kwargs, 
