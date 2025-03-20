@@ -24,7 +24,7 @@ path_root_pub = path_root/'public_export'
 path_root_pub_meta = path_root_pub/'metadata' 
 
 # Read CSV file
-df_lab = pd.read_csv(path_root_pub_meta / 'annotations.csv')
+df_lab = pd.read_csv(path_root_pub_meta / 'annotation.csv')
 df_lab['StudyDate'] = pd.to_datetime(df_lab['StudyDate'], format='%Y-%m-%d')
 label_cols = list(CLASS_LABELS.keys()) # df_lab.columns[6:]
 

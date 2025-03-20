@@ -119,7 +119,7 @@ class CXR_Dataset(data.Dataset):
         df = self.load_split(self.path_root/'metadata/split.csv', fold=fold, split=split, fraction=fraction)
         
         # Merge with labels 
-        df_labels = pd.read_csv(self.path_root/'metadata/annotations.csv')
+        df_labels = pd.read_csv(self.path_root/'metadata/annotation.csv')
         # df = df.merge(df_labels, on=['PatientID', 'StudyInstanceUID', 'SeriesInstanceUID'], how='inner')
         df = df.merge(df_labels, on='UID', how='inner')
 
