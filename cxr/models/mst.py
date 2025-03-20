@@ -34,8 +34,8 @@ class MSTRegression(BasicRegression):
 
     def forward(self, x):
         x = x.repeat(1, 3, 1, 1) # Gray to RGB
-        # x = self.model(x) #  -> [B, out] 
-        x = checkpoint(self.model, x.requires_grad_())
+        x = self.model(x) #  -> [B, out] 
+        # x = checkpoint(self.model, x.requires_grad_())
         x = self.linear(x)
         return x
     
@@ -73,8 +73,8 @@ class MST(BasicClassifier):
 
     def forward(self, x):
         x = x.repeat(1, 3, 1, 1) # Gray to RGB
-        # x = self.model(x) 
-        x = checkpoint(self.model, x.requires_grad_())
+        x = self.model(x) 
+        # x = checkpoint(self.model, x.requires_grad_())
         # x = x.pooler_output
         x = self.linear(x)
         return x
