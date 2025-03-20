@@ -94,8 +94,8 @@ class CXR_Dataset(data.Dataset):
             self.label = [label]
         else:
             self.label = label
-        # self.class_labels_num = [len(self.CLASS_LABELS[l])-1 for l in self.label] # Remove -1 for CORN 
-        self.class_labels_num = [len(self.CLASS_LABELS[l]) for l in self.label] 
+        self.class_labels_num = [len(self.CLASS_LABELS[l])-1 for l in self.label] # Remove -1 for CORN 
+        # self.class_labels_num = [len(self.CLASS_LABELS[l]) for l in self.label] 
 
         self.cache_images = cache_images
         self.regression = regression
