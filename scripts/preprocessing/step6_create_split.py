@@ -54,7 +54,7 @@ if __name__ == "__main__":
     path_root = Path('/ocean_storage/data/UKA/UKA_Thorax')/'public_export'
     path_root_metadata = path_root/'metadata'
 
-    df = pd.read_csv(path_root_metadata/'annotations.csv', dtype={'Patient ID':str})
+    df = pd.read_csv(path_root_metadata/'annotation.csv', dtype={'Patient ID':str})
 
     print("Patients", df['PatientID'].nunique())
     # print("Studies", df['StudyInstanceUID'].nunique())

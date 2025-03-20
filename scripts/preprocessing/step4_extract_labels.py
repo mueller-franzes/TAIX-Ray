@@ -215,7 +215,7 @@ if __name__ == "__main__":
     
     df_annonymized = df[['PatientID', 'PhysicianID', 'StudyDate', 'Age', 'Sex', *single_side_labels, *double_side_labels_lr]]
     df_annonymized.insert(0, 'UID', df['PseudoAccessionNumber'])
-    df_annonymized.to_csv(path_out_metadata/'annotations.csv', index=False)
+    df_annonymized.to_csv(path_out_metadata/'annotation.csv', index=False)
 
 
 
