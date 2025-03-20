@@ -103,7 +103,7 @@ for split, split_dataset in dataset.items():
 metadata_df = pd.DataFrame(metadata)
 
 # Save annotations to CSV files
-metadata_df.drop(columns=["Split", "Fold"]).to_csv(metadata_dir / "annotations.csv", index=False)
+metadata_df.drop(columns=["Split", "Fold"]).to_csv(metadata_dir / "annotation.csv", index=False)
 
 # Save split to CSV files (5-fold)
 split_csv_path = hf_hub_download(repo_id=DATASET_NAME, repo_type="dataset", filename="split.csv", local_dir=metadata_dir)
