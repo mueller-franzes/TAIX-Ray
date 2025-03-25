@@ -4,7 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import seaborn as sns
 from cxr.data.datasets.cxr_dataset import CXR_Dataset
+from matplotlib.ticker import FuncFormatter
 CLASS_LABELS = CXR_Dataset.CLASS_LABELS
+
+
+def format_with_dots(x, pos):
+    return f'{x:,.0f}' 
 
 def get_labels(cls):
     if cls == "HeartSize":
@@ -165,29 +170,32 @@ axes[0, 0].set_xlabel('Age [years]', fontsize=14, fontweight="bold")
 axes[0, 0].set_ylabel('Radiographs [N]', fontsize=14, fontweight="bold")
 axes[0, 0].set_xlim(left=0.0)
 axes[0, 0].tick_params(axis='both', which='major', labelsize=12)
-axes[0, 0].grid(True, linestyle='--', alpha=0.7)
+axes[0, 0].grid(True, linestyle='--', alpha=0.7) 
+axes[0, 0].yaxis.set_major_formatter(FuncFormatter(format_with_dots))
 
 axes[0, 0].spines["top"].set_visible(False)
 axes[0, 0].spines["right"].set_visible(False)
 axes[0, 0].spines["left"].set_visible(False)
 axes[0, 0].spines["bottom"].set_visible(False)
 
-axes[0, 0].set_title("(A) Radiographs per Age", fontsize=16, fontweight="bold")
+axes[0, 0].set_title("(a)", fontsize=16, fontweight="bold", loc='left', x=-0.17)
 
 # ------------ (B) Exams per Physician Bar Plot ------------
 # Examinations per physician plot
+num_exam_per_phy = num_exam_per_phy.sort_values(ascending=False)
 axes[0, 1].bar(range(len(num_exam_per_phy)), num_exam_per_phy, color='#E0E0E0', edgecolor='#707070', alpha=0.9)
-axes[0, 1].set_xlabel('Physician ID', fontsize=14, fontweight="bold")
+axes[0, 1].set_xlabel('Radiologist ID', fontsize=14, fontweight="bold")
 axes[0, 1].set_ylabel('Radiographs [N]', fontsize=14, fontweight="bold")
 axes[0, 1].tick_params(axis='both', which='major', labelsize=12)
 axes[0, 1].grid(True, linestyle='--', alpha=0.7)
+axes[0, 1].yaxis.set_major_formatter(FuncFormatter(format_with_dots))
 
 axes[0, 1].spines["top"].set_visible(False)
 axes[0, 1].spines["right"].set_visible(False)
 axes[0, 1].spines["left"].set_visible(False)
 axes[0, 1].spines["bottom"].set_visible(False)
 
-axes[0, 1].set_title("(B) Radiographs per Physician", fontsize=16, fontweight="bold")
+axes[0, 1].set_title("(b)", fontsize=16, fontweight="bold", loc='left', x=-0.17)
 
 # ------------ (C) Exams per Month Line Plot ------------
 # Examinations per month plot
@@ -209,13 +217,14 @@ axes[1, 0].set_xlabel('Month', fontsize=14, fontweight="bold")
 axes[1, 0].set_ylabel('Radiographs [N]', fontsize=14, fontweight="bold")
 axes[1, 0].tick_params(axis='both', which='major', labelsize=12)
 axes[1, 0].grid(True, linestyle='--', alpha=0.7)
+axes[1, 0].yaxis.set_major_formatter(FuncFormatter(format_with_dots))
 
 axes[1, 0].spines["top"].set_visible(False)
 axes[1, 0].spines["right"].set_visible(False)
 axes[1, 0].spines["left"].set_visible(False)
 axes[1, 0].spines["bottom"].set_visible(False)
 
-axes[1, 0].set_title("(C) Radiographs per Month", fontsize=16, fontweight="bold")
+axes[1, 0].set_title("(c)", fontsize=16, fontweight="bold", loc='left', x=-0.17)
 
 # ------------ (D) Gender Distribution Pie Chart ------------
 labels = ['Male', 'Female']
@@ -224,20 +233,21 @@ sizes = [counts.get('M', 0), counts.get('F', 0)]
 
 # Create the bar plot
 colors = ['#E0E0E0', '#707070']
-axes[1, 1].bar(labels, sizes, color=colors, edgecolor='black', alpha=0.9,  width=0.5)
+axes[1, 1].bar(labels, sizes, color=colors, edgecolor='black', alpha=0.9,  width=0.75)
 
 # Set the x-ticks to display approximately 12 ticks
 axes[1, 1].set_ylabel('Radiographs [N]', fontsize=14, fontweight="bold")
 axes[1, 1].set_xlabel('Sex', fontsize=14, fontweight="bold")
 axes[1, 1].tick_params(axis='both', which='major', labelsize=12)
 axes[1, 1].grid(True, linestyle='--', alpha=0.7)
+axes[1, 1].yaxis.set_major_formatter(FuncFormatter(format_with_dots))
 
 axes[1, 1].spines["top"].set_visible(False)
 axes[1, 1].spines["right"].set_visible(False)
 axes[1, 1].spines["left"].set_visible(False)
 axes[1, 1].spines["bottom"].set_visible(False)
 
-axes[1, 1].set_title("(D) Radiographs per Sex", fontsize=16, fontweight="bold")
+axes[1, 1].set_title("(d)", fontsize=16, fontweight="bold", loc='left', x=-0.17)
 
 # Adjust layout to avoid overlap
 plt.tight_layout()

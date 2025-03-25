@@ -29,7 +29,7 @@ def evaluate(y_true, y_pred, label, label_vals, axis):
     sns.heatmap(df_cm, ax=axis, cmap=cmap, cbar=False, fmt='d', annot=True) 
     axis.set_title(f'{label}', fontdict=fontdict) # CM =  [[TN, FP], [FN, TP]]   ACC={acc:.2f}
     axis.set_xlabel('Neural Network' , fontdict=fontdict)
-    axis.set_ylabel('Physicians' , fontdict=fontdict)
+    axis.set_ylabel('Radiologist' , fontdict=fontdict)
 
     if label == "HeartSize":
         plt.setp(axis.get_xticklabels(), rotation=25, ha='center')
@@ -41,7 +41,7 @@ def evaluate(y_true, y_pred, label, label_vals, axis):
     return cm
 
 
-path_run = Path('results/MST_2025_03_18_101942_ordinal')
+path_run = Path('results/MST_2025_03_20_135914_ordinal')
 
 df = pd.read_csv(path_run/'results.csv')
 df['GT'] = df['GT'].apply(ast.literal_eval)
