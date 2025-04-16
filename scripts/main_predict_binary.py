@@ -32,10 +32,11 @@ def evaluate(gt, nn, nn_pred, label, path_out):
     #  -------------------------- Confusion Matrix -------------------------
     acc = cm2acc(cm)
     _,_, sens, spec = cm2x(cm)
-    df_cm = pd.DataFrame(data=cm, columns=['False', 'True'], index=['False', 'True'])
+    df_cm = pd.DataFrame(data=cm, columns=['Absent', 'Present'], index=['Absent', 'Present'])
     fig, axis = plt.subplots(1, 1, figsize=(4,4))
     sns.heatmap(df_cm, ax=axis, cbar=False, fmt='d', annot=True) 
-    axis.set_title(f'Confusion Matrix {label} ACC={acc:.2f}', fontdict=fontdict) # CM =  [[TN, FP], [FN, TP]] 
+    label_str = "Cardiomegaly" if label == 'HeartSize' else label
+    axis.set_title(f'Confusion Matrix {label_str} ACC={acc:.2f}', fontdict=fontdict) # CM =  [[TN, FP], [FN, TP]] 
     axis.set_xlabel('Prediction' , fontdict=fontdict)
     axis.set_ylabel('True' , fontdict=fontdict)
     fig.tight_layout()
@@ -52,7 +53,7 @@ def evaluate(gt, nn, nn_pred, label, path_out):
 if __name__ == "__main__":
     #------------ Get Arguments ----------------
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_run', default='runs/MST_2025_03_18_102751_binary_large/mst_ordinal_large.ckpt', type=str)
+    parser.add_argument('--path_run', default='runs/MST_2025_03_18_101740_binary/mst_ordinal_large.ckpt', type=str)
     parser.add_argument('--label', default='none', type=lambda x: None if x.lower() == 'none' else x) # None will use all labels 
     parser.add_argument('--show_attention', action='store_true')
     args = parser.parse_args()

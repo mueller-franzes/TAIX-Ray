@@ -25,12 +25,13 @@ def evaluate(y_true, y_score, label, axis):
     y_scores_bin = y_score>=0.5 # WANRING: Must be >= not > 
     cm = confusion_matrix(y_true, y_scores_bin) # [[TN, FP], [FN, TP]]
     acc = accuracy_score(y_true, y_scores_bin)
-    df_cm = pd.DataFrame(data=cm, columns=['False', 'True'], index=['False', 'True'])
+    df_cm = pd.DataFrame(data=cm, columns=['Absent', 'Present'], index=['Absent', 'Present'])
     
     sns.heatmap(df_cm, ax=axis, cmap=cmap, cbar=False, fmt='d', annot=True) 
-    axis.set_title(f'{label}', fontdict=fontdict) # CM =  [[TN, FP], [FN, TP]]  \nACC={acc:.2f}
+    label_str = "Cardiomegaly" if label == 'HeartSize' else label
+    axis.set_title(f'{label_str}', fontdict=fontdict) # CM =  [[TN, FP], [FN, TP]]  \nACC={acc:.2f}
     axis.set_xlabel('Neural Network' , fontdict=fontdict)
-    axis.set_ylabel('Physicians' , fontdict=fontdict)
+    axis.set_ylabel('Radiologist' , fontdict=fontdict)
 
     acc_mean, acc_ci, acc_std = bootstrap_metric(y_true, y_scores_bin, accuracy_score)
     print(f"{label}: Accuracy = {acc:.2f} [{acc_ci[0]:.2f} - {acc_ci[1]:.2f}], STD = {acc_std:.2f}")
