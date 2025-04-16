@@ -166,7 +166,7 @@ plt.style.use('seaborn-v0_8-whitegrid')
 axes[0, 0].hist(df_lab['Age_Years'], bins=np.linspace(0, df_lab['Age_Years'].max() * 1.05, 21), 
                   color='#E0E0E0', edgecolor='#707070', alpha=0.9) # weights=np.ones(len(df_lab)) * 100 / len(df_lab),
 
-axes[0, 0].set_xlabel('Age [years]', fontsize=14, fontweight="bold")
+axes[0, 0].set_xlabel('Patient Age [Years]', fontsize=14, fontweight="bold")
 axes[0, 0].set_ylabel('Radiographs [N]', fontsize=14, fontweight="bold")
 axes[0, 0].set_xlim(left=0.0)
 axes[0, 0].tick_params(axis='both', which='major', labelsize=12)
@@ -237,7 +237,7 @@ axes[1, 1].bar(labels, sizes, color=colors, edgecolor='black', alpha=0.9,  width
 
 # Set the x-ticks to display approximately 12 ticks
 axes[1, 1].set_ylabel('Radiographs [N]', fontsize=14, fontweight="bold")
-axes[1, 1].set_xlabel('Sex', fontsize=14, fontweight="bold")
+axes[1, 1].set_xlabel('Patient Sex', fontsize=14, fontweight="bold")
 axes[1, 1].tick_params(axis='both', which='major', labelsize=12)
 axes[1, 1].grid(True, linestyle='--', alpha=0.7)
 axes[1, 1].yaxis.set_major_formatter(FuncFormatter(format_with_dots))
