@@ -82,8 +82,8 @@ def extract_re_li(text, return_label=True):
 
 if __name__ == "__main__":
     # Setting 
-    path_root = Path('/ocean_storage/data/UKA/UKA_Thorax/download')
-    path_metadata = path_root/'metadata'
+    path_root = Path('/ocean_storage/data/UKA/UKA_Thorax/core')
+    path_metadata = path_root/'foundation_files'
 
     path_root_out = Path('/ocean_storage/data/UKA/UKA_Thorax/public_export')
     path_out_metadata = path_root_out / 'metadata'
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
 
     # # -------------------------- Verify the extracted labels with old extracted labels ----------------------
-    # df_old = pd.read_csv(path_metadata/'old_backup/labels_extracted_old.csv')
+    # df_old = pd.read_csv(path_metadata/'study_old/metadata/labels_extracted_old.csv')
     # df_old['image_id'] = df_old['image_id'].astype(str)
 
     # print("Old labels", len(df_old))

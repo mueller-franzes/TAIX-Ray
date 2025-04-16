@@ -83,7 +83,7 @@ def read_metadata(path_dcm):
 if __name__ == "__main__":
     # Setting 
     path_root = Path('/ocean_storage/data/UKA/UKA_Thorax')
-    path_root_data = path_root/'download/data'
+    path_root_data = path_root/'core/data'
 
     path_root_out = path_root/'public_export'
     path_root_out_data = path_root_out/'data'
