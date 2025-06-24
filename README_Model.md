@@ -38,12 +38,3 @@ print(f"Checkpoint downloaded to: {file_path}")
 ```
 
 
-<br>
-
-## Cite
-
-
-```
-@article{ 
-}
-```

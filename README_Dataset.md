@@ -2,7 +2,7 @@
 
 TAIX-Ray is a comprehensive dataset of about 200k bedside chest radiographs from about 50k intensive care patients at the University Hospital in Aachen, Germany, collected between 2010 and 2024. 
 Trained radiologists provided structured reports at the time of acquisition, assessing key findings such as cardiomegaly, pulmonary congestion, pleural effusion, pulmonary opacities, and atelectasis on an ordinal scale. 
-Please see our paper for a detailed description:  [TAIX-Ray Paper](https://arxiv.org/abs/your-paper-link)
+Please see our paper for a detailed description:  [Not yet available.](https://arxiv.org/abs/your-paper-link)
 
 <br>
 
@@ -112,11 +112,3 @@ print("Dataset streamed and saved successfully!")
 ```
 
 
-<br>
-
-## Cite
-
-```
-@article{ 
-}
-```
