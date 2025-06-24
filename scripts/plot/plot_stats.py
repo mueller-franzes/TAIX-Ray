@@ -84,13 +84,15 @@ for split in ['train', 'val', 'test']:
     df_split = df[df['Split']==split]
     num_patients = df_split['PatientID'].nunique()
     print(f"----------- {split} -----------")
-    print(f"Examinations {len(df_split)} ({len(df_split)/total*100:.0f}%)")
-    print(f"Patients {df_split['PatientID'].nunique()} ({df_split['PatientID'].nunique()/total_patients*100:.0f}%)")
-    print(f"Mean Age {df_split['Age'].mean()/365:.0f} ± {df_split['Age'].std()/365:.0f}")
+    print(f"Examinations {len(df_split)} ({len(df_split)/total*100:.1f}%)")
+    print(f"Patients {df_split['PatientID'].nunique()} ({df_split['PatientID'].nunique()/total_patients*100:.1f}%)")
+    # print(f"Mean Age {df_split['Age'].mean()/365:.0f} ± {df_split['Age'].std()/365:.0f}")
+    q1, q2 = df_split['Age'].quantile([0.025, 0.975])
+    print(f"Median Age {df_split['Age'].median()/365:.0f} [{q1/365:.0f} - {q2/365:.0f}]")
     counts = df_split.groupby('PatientID')['Sex'].apply(lambda x:x.iloc[0]).value_counts()
 
-    print("Male", counts['M'], f"({counts['M']/num_patients*100:.0f}%)")
-    print("Female", counts['F'], f"({counts['F']/num_patients*100:.0f}%)")
+    print("Male", counts['M'], f"({counts['M']/num_patients*100:.1f}%)")
+    print("Female", counts['F'], f"({counts['F']/num_patients*100:.1f}%)")
 
 
 
@@ -203,7 +205,7 @@ df_lab['YearMonth'] = df_lab['StudyDate'].dt.to_period('M')
 exam_per_month = df_lab.groupby('YearMonth').size()
 
 start_period = pd.Timestamp("2010-01-01").to_period('M')
-end_period = pd.Timestamp("2024-01-01").to_period('M')
+end_period = pd.Timestamp("2023-12-31").to_period('M')
 exam_per_month = exam_per_month[(exam_per_month.index >= start_period) & (exam_per_month.index <= end_period)]
 exam_per_month.index = exam_per_month.index.astype(str)
 
