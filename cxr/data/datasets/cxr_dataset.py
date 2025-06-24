@@ -168,6 +168,7 @@ class CXR_Dataset(data.Dataset):
         else:
             img = self.load_img(path_file)
         
+        # img = img.clip(*np.quantile(img, q=[0.025, 0.975])) 
         img = torch.from_numpy(img)[None] # [1, H, W]
 
         # mask = (img>img.quantile(q=0.025)) & (img<img.quantile(q=0.975))
