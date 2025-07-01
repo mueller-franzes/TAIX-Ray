@@ -83,7 +83,7 @@ data_dir.mkdir(parents=True, exist_ok=True)
 metadata_dir.mkdir(parents=True, exist_ok=True)
 
 # Load dataset in streaming mode
-dataset = dataset = load_dataset("TLAIM/TAIX-Ray", name="default",  streaming=True)
+dataset = load_dataset("TLAIM/TAIX-Ray", name="default",  streaming=True)
 
 # Process dataset
 metadata = []
@@ -102,11 +102,12 @@ for split, split_dataset in dataset.items():
 # Convert metadata to DataFrame
 metadata_df = pd.DataFrame(metadata)
 
+# Save split to CSV files
+df_split = metadata_df[["UID", "Split"]]
+df_split.to_csv(metadata_dir / "split.csv", index=False) 
+
 # Save annotations to CSV files
 metadata_df.drop(columns=["Split", "Fold"]).to_csv(metadata_dir / "annotation.csv", index=False)
-
-# Save split to CSV files (5-fold)
-split_csv_path = hf_hub_download(repo_id=DATASET_NAME, repo_type="dataset", filename="split.csv", local_dir=metadata_dir)
 
 print("Dataset streamed and saved successfully!")
 ```
