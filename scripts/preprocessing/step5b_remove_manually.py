@@ -19,7 +19,12 @@ remove_uids = [
     'a925b916d9c7716c0c3a1f38ce6106b16c223308092a066cef2654af860fe26a', # shoulder image
     '3df29468008172279c5bc92e1d0a1b0a85785b428efb0e917647d8dc60f5cd36', # Abdomen a.p.
     '077aeb0848604d7f7f7efddb5261ec529f861bc657d56a21eb7c62d06486eae0', # Thorax lateral
-    'b3cb19f7322d76d23cc1b0b82f15cf91f4d0d5ce9ab6d550928d13d50692dce6'  # Abdomen LSL
+    'b3cb19f7322d76d23cc1b0b82f15cf91f4d0d5ce9ab6d550928d13d50692dce6', # Abdomen LSL
+
+    '108e2d88e37b48ea8325f1de3878c4705b3d1b546a53e6ae024c85b2441d4e7b', # Text in image 
+    '68c7c75bea6c0596e325762d055c97c985e6bbf65b14e86a0cbda1b18b7186e1', # Text in image
+    '55be502d7a6f40a6a85649bbcf8da3e4dbd2a134588cb5ddeebf7adb42e05e17', # Text in image
+    'ffe175be5c6bde735621aec70ab9444e7332d54564b5ed116bd84b935142e2f4', # Text in image
 ]
 
   
