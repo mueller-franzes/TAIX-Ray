@@ -2,7 +2,7 @@
 
 The official codebase for the TAIX-Ray paper.
 
-Please see our paper for a detailed description:  [TAIX-Ray Paper](https://arxiv.org/abs/your-paper-link)
+Please see our paper for a detailed description:  [TAIX-Ray Paper](https://doi.org/10.1038/s41597-026-07271-7)
 
 <br>
 
@@ -78,11 +78,16 @@ python scripts/main_predict_ordinal.py --path_run path/to/checkpoint.ckpt
 ## Citation
 If you use this work in your research, please cite:
 ```bibtex
-@article{yourcitation2025,
-  title={TAIX-Ray: A Dataset for X-ray Classification},
-  author={Your Name and Others},
-  journal={Journal Name},
-  year={2025}
+@article{truhn_comprehensive_2026,
+	title = {A comprehensive bedside chest radiography dataset with structured, itemized and graded radiologic reports},
+	volume = {13},
+	issn = {2052-4463},
+	url = {https://www.nature.com/articles/s41597-026-07271-7},
+	doi = {10.1038/s41597-026-07271-7},
+	journal = {Scientific Data},
+	author = {Truhn, Daniel and Geiger, Daniel and Siepmann, Robert and Von Der Stück, Marc Sebastian and Bressem, Keno Kyrill and Kather, Jakob Nikolas and Kuhl, Christiane and Müller-Franzes, Gustav and Nebelung, Sven},
+	year = {2026},
+	pages = {632},
 }
 ```
 
